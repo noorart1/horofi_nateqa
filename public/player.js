@@ -1,21 +1,22 @@
-// Player: decoding, waveform, swipeable cover, letter grid, shuffle/repeat.
+// Player: decoding, waveform, swipeable cover, letter grid, shuffle/repeat, speed.
 // Expects TRACKS and KEY globals from index.php.
 const $ = id => document.getElementById(id);
 const PLAY = 'M8 5v14l11-7z', PAUSE = 'M6 5h4v14H6zm8 0h4v14h-4z';
 const BAR = 3, GAP = 1; // waveform bar width / gap in CSS px
-let ctx, buf, src, startAt = 0, offset = 0, playing = false, cur = -1, loadId = 0;
+// offset/pos are in seconds of the original recording, whatever the speed
+let ctx, buf, src, startAt = 0, offset = 0, playing = false, cur = -1, loadId = 0, rate = 1, stretched = {};
 let peaks = null, hover = -1, drag = null;
 
 const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-const pos = () => playing ? Math.min(ctx.currentTime - startAt, buf.duration) : offset;
+const pos = () => playing ? Math.min((ctx.currentTime - startAt) * rate, buf.duration) : offset;
 
-// letters listened to the end, per browser (convenience only)
-let done = new Set();
-try { done = new Set(JSON.parse(localStorage.getItem('done') || '[]')); } catch {}
+// letters listened to the end, stored on the server so they follow the user to any device
+const done = new Set(TRACKS.flatMap((t, i) => t.done ? [i] : []));
 function markDone(i) {
+  if (done.has(i)) return;
   done.add(i);
-  try { localStorage.setItem('done', JSON.stringify([...done])); } catch {}
   renderDone();
+  fetch('progress.php', { method: 'POST', headers: { 'X-Player': '1' }, body: new URLSearchParams({ t: i }) });
 }
 function renderDone() {
   [...$('list').children].forEach((b, j) => b.classList.toggle('done', done.has(j)));
@@ -97,15 +98,15 @@ function play() {
   ctx.resume();
   stopSrc();
   src = ctx.createBufferSource();
-  src.buffer = buf;
+  src.buffer = rate === 1 ? buf : (stretched[rate] ??= stretch(buf, rate));
   src.connect(ctx.destination);
   src.onended = () => {
     playing = false; offset = 0; setIcon(); markDone(cur);
     if (repeat === 'one') return play();
     if (repeat === 'all') load(nextIndex()); // otherwise stop after this letter
   };
-  src.start(0, offset);
-  startAt = ctx.currentTime - offset;
+  src.start(0, offset / rate);
+  startAt = ctx.currentTime - offset / rate;
   playing = true;
   setIcon();
 }
@@ -137,13 +138,12 @@ TRACKS.forEach(t => {
 });
 const imgs = [...$('strip').children];
 
-// ponytail: thumbnails reuse the full-size images (lazy-loaded); generate small thumbs if bandwidth matters
 TRACKS.forEach((t, i) => {
   const b = document.createElement('button');
   b.className = 'thumb';
   b.ariaLabel = t.title;
   b.innerHTML = `<img loading="lazy" alt="" draggable="false"><b></b>`;
-  b.querySelector('img').src = t.img;
+  b.querySelector('img').src = t.thumb;
   b.querySelector('b').textContent = t.glyph || t.title;
   b.onclick = () => i !== cur && select(i);
   $('thumbs').append(b);
@@ -191,7 +191,7 @@ function select(i) {
   remember(i);
   ++loadId;
   pause();
-  buf = null; peaks = null; offset = 0;
+  buf = null; peaks = null; offset = 0; stretched = {};
   show(i);
   $('dur').textContent = '0:00';
   $('status').textContent = '';
@@ -217,7 +217,7 @@ async function load(i, track = true) {
   ctx.resume();
   const id = ++loadId;
   pause();
-  buf = null; peaks = null; offset = 0;
+  buf = null; peaks = null; offset = 0; stretched = {};
   show(i);
   $('dur').textContent = '0:00';
   $('status').textContent = 'جارٍ التحميل…';
@@ -277,6 +277,59 @@ $('prev').onclick = () => {
   load(p, false);
 };
 $('next').onclick = () => load(nextIndex());
+
+// --- playback speed (slower speech keeps its pitch) ---
+const SPEEDS = [1, 0.75, 0.5];
+try { rate = SPEEDS.includes(+localStorage.getItem('rate')) ? +localStorage.getItem('rate') : 1; } catch {}
+function renderSpeed() {
+  $('speed').textContent = rate.toLocaleString('ar') + '×';
+  $('speed').classList.toggle('on', rate !== 1);
+}
+$('speed').onclick = () => {
+  const was = playing;
+  if (was) pause();
+  rate = SPEEDS[(SPEEDS.indexOf(rate) + 1) % SPEEDS.length];
+  renderSpeed();
+  try { localStorage.setItem('rate', rate); } catch {}
+  if (was) play();
+};
+renderSpeed();
+
+// WSOLA time-stretch: each output frame is taken from near its ideal input position,
+// shifted to where it best continues the previous frame, so the speech slows down without dropping in pitch.
+function stretch(b, r) {
+  const N = 1024, Hs = N / 2, tol = 256, len = b.length, chans = b.numberOfChannels;
+  const ref = b.getChannelData(0);
+  const outLen = Math.ceil(len / r) + N;
+  const out = ctx.createBuffer(chans, outLen, b.sampleRate);
+  const win = Float32Array.from({ length: N }, (_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N));
+  const norm = new Float32Array(outLen);
+  let prev = 0;
+  for (let k = 0, o = 0; o + N <= outLen; k++, o += Hs) {
+    const target = Math.round(k * Hs * r), nat = prev + Hs;
+    if (target + tol + N >= len || nat + Hs >= len) break;
+    let best = target;
+    if (k > 0) {
+      let bestC = -Infinity;
+      for (let p = Math.max(0, target - tol); p <= target + tol; p += 4) {
+        let c = 0;
+        for (let j = 0; j < Hs; j += 8) c += ref[p + j] * ref[nat + j];
+        if (c > bestC) { bestC = c; best = p; }
+      }
+    }
+    for (let c = 0; c < chans; c++) {
+      const inp = b.getChannelData(c), dst = out.getChannelData(c);
+      for (let j = 0; j < N; j++) dst[o + j] += inp[best + j] * win[j];
+    }
+    for (let j = 0; j < N; j++) norm[o + j] += win[j];
+    prev = best;
+  }
+  for (let c = 0; c < chans; c++) {
+    const dst = out.getChannelData(c);
+    for (let i = 0; i < outLen; i++) if (norm[i] > 1e-3) dst[i] /= norm[i];
+  }
+  return out;
+}
 
 (function tick() {
   if (buf) $('cur').textContent = fmt(drag ?? pos());

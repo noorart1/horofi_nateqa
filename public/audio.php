@@ -5,7 +5,7 @@ require __DIR__ . '/../lib.php';
 
 $key = $_SESSION['key'] ?? null;
 session_write_close();
-if (empty($_SESSION['uid']) || !$key || ($_SERVER['HTTP_X_PLAYER'] ?? '') !== '1') {
+if (!current_user() || !$key || ($_SERVER['HTTP_X_PLAYER'] ?? '') !== '1') {
     http_response_code(403);
     exit;
 }

@@ -21,9 +21,36 @@ function db(): PDO
             CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL COLLATE NOCASE,
                 pass TEXT NOT NULL, created TEXT DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE IF NOT EXISTS codes(code TEXT PRIMARY KEY, user_id INTEGER UNIQUE REFERENCES users(id));
-            CREATE TABLE IF NOT EXISTS fails(ip TEXT NOT NULL, at INTEGER NOT NULL);');
+            CREATE TABLE IF NOT EXISTS fails(ip TEXT NOT NULL, at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS progress(user_id INTEGER NOT NULL, track TEXT NOT NULL, PRIMARY KEY(user_id, track));');
+        // columns added after the first release
+        $cols = array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
+        foreach (['token TEXT', 'is_admin INTEGER NOT NULL DEFAULT 0', 'last_login TEXT'] as $col) {
+            if (!in_array(explode(' ', $col)[0], $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN $col");
+        }
     }
     return $db;
+}
+
+/** Start a session for user $id. The new token logs out any other device of this user. */
+function login_as(int $id): never
+{
+    session_regenerate_id(true);
+    $token = bin2hex(random_bytes(16));
+    db()->prepare("UPDATE users SET token = ?, last_login = datetime('now') WHERE id = ?")->execute([$token, $id]);
+    $_SESSION = ['uid' => $id, 'token' => $token, 'key' => random_bytes(32)];
+    header('Location: ./');
+    exit;
+}
+
+/** The logged-in user, or null if not logged in, deleted, or logged in on another device since. */
+function current_user(): ?array
+{
+    if (empty($_SESSION['uid'])) return null;
+    $s = db()->prepare('SELECT id, username, is_admin, token FROM users WHERE id = ?');
+    $s->execute([$_SESSION['uid']]);
+    $u = $s->fetch();
+    return $u && $u['token'] && hash_equals($u['token'], (string)($_SESSION['token'] ?? '')) ? $u : null;
 }
 
 function too_many_fails(): bool
@@ -62,12 +89,20 @@ function track_title(string $file): string
     return LETTERS[(int)$name - 1] ?? trim(preg_replace(['/^\d+\s*/', '/\s*Master G2$/i'], '', $name));
 }
 
-/** Image for track #i (img/02.webp for the 2nd track…), falls back to the first image. */
-function track_image(int $i): string
+/** Source image file for track #i (img/02.webp for the 2nd track…), falling back to the first image. */
+function track_image_file(int $i): ?string
 {
     $all = glob(ROOT . '/public/img/*.{webp,jpg,jpeg,png}', GLOB_BRACE);
     sort($all);
     $own = glob(ROOT . '/public/img/' . sprintf('%02d', $i + 1) . '.{webp,jpg,jpeg,png}', GLOB_BRACE);
-    $f = $own[0] ?? $all[0] ?? null;
-    return $f ? 'img/' . basename($f) : '';
+    return $own[0] ?? $all[0] ?? null;
+}
+
+const IMAGE_WIDTHS = [240, 1200]; // thumbnail, cover
+
+/** URL of a resized WebP copy; the mtime in the URL lets browsers cache it forever. */
+function track_image(int $i, int $width): string
+{
+    $f = track_image_file($i);
+    return $f ? 'img.php?f=' . rawurlencode(basename($f)) . "&w=$width&v=" . filemtime($f) : '';
 }

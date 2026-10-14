@@ -1,0 +1,8 @@
+# private: license codes, database, paid media
+license.xlsx
+~$*
+data/
+Master G2/
+*.webp
+*.mp3
+public/img/

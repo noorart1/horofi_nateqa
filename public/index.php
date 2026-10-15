@@ -109,7 +109,7 @@ $banner = image_url('headerontop.jpg', 1200);
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>حروفي الناطقة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@700;800&family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
 </head>
 <body>
@@ -119,7 +119,7 @@ $banner = image_url('headerontop.jpg', 1200);
   <h1>حروفي الناطقة</h1>
   <div class="tabs">
     <button type="button" data-tab="login" class="<?= $tab === 'login' ? 'on' : '' ?>">تسجيل الدخول</button>
-    <button type="button" data-tab="register" class="<?= $tab === 'register' ? 'on' : '' ?>">حساب جديد برمز التفعيل</button>
+    <button type="button" data-tab="register" class="<?= $tab === 'register' ? 'on' : '' ?>">حساب جديد</button>
   </div>
   <?php if ($err): ?><p class="err" role="alert"><?= $h($err) ?></p><?php endif ?>
   <form method="post" id="login" <?= $tab === 'login' ? '' : 'hidden' ?>>
@@ -166,37 +166,41 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
     <span class="counter" id="counter"></span>
   </div>
   <div class="thumbs" id="thumbs"></div>
-  <section class="sc">
-    <div class="sc-head">
-      <button id="play" class="sc-play" aria-label="تشغيل"><svg viewBox="0 0 24 24"><path id="icon" d="M8 5v14l11-7z"/></svg></button>
-      <div class="sc-skip">
-        <button id="prev" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
-        <button id="next" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6z"/></svg></button>
-        <button id="shuffle" aria-label="تشغيل عشوائي" title="تشغيل عشوائي" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
-        <button id="repeat"><svg viewBox="0 0 24 24"><path id="repeatIcon"/></svg></button>
-        <button id="speed" class="speed" aria-label="سرعة التشغيل" title="سرعة التشغيل"></button>
+  <section class="sc" aria-label="مشغّل الحروف">
+    <div class="sc-stage">
+      <div class="badge" id="badge" aria-hidden="true"><span id="badgeGlyph"></span></div>
+      <div class="sc-meta">
+        <h2 class="sc-title" id="title"></h2>
+        <button id="writeBtn" class="write-btn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8 4 20z"/><path d="M13.8 6.8l3.4 3.4"/></svg>تمرين الكتابة</button>
       </div>
-      <div class="sc-meta"><div class="sc-artist">حروفي الناطقة</div><div class="sc-title" id="title"></div>
-        <button id="writeBtn" class="write-btn" hidden>✍️ تمرين الكتابة</button></div>
     </div>
-    <div class="wave" id="wave" role="slider" aria-label="موضع التشغيل" tabindex="0">
+    <div class="sc-controls">
+      <button id="prev" class="skip" aria-label="السابق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button id="play" class="sc-play" aria-label="تشغيل"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="icon" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></button>
+      <button id="next" class="skip" aria-label="التالي"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    </div>
+    <div class="wave" id="wave" role="slider" aria-label="موضع التشغيل" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
       <canvas id="cv"></canvas>
-      <span class="t l" id="cur">0:00</span><span class="t r" id="dur">0:00</span>
     </div>
-    <div class="status" id="status"></div>
+    <div class="sc-times"><span id="cur">0:00</span><span class="status" id="status" role="status"></span><span id="dur">0:00</span></div>
+    <div class="sc-grown" role="group" aria-label="إعدادات للكبار">
+      <button id="shuffle" aria-label="تشغيل عشوائي" title="تشغيل عشوائي" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
+      <button id="repeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="repeatIcon"/></svg></button>
+      <button id="speed" class="speed" aria-label="سرعة التشغيل" title="سرعة التشغيل"></button>
+    </div>
   </section>
   <div class="letters-head"><h2>الحروف</h2><span id="progress"></span></div>
-  <div class="rewards"><span id="medals" role="img"></span><a id="cert" href="certificate.php" hidden>🏆 شهادتك</a></div>
+  <div class="rewards"><span id="medals" role="img"></span><a id="cert" href="certificate.php" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 5.5H4.5v1A3.5 3.5 0 0 0 8 10M17 5.5h2.5v1A3.5 3.5 0 0 1 16 10M12 13v4M8.5 20h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>شهادتك</a></div>
   <div class="letters" id="list"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <dialog id="writing" class="writing" aria-labelledby="wTitle">
-    <div class="w-head"><h2 id="wTitle"></h2><button id="wClose" class="w-close" aria-label="إغلاق">✕</button></div>
+    <div class="w-head"><h2 id="wTitle"></h2><button id="wClose" class="w-close" aria-label="إغلاق"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <canvas id="wPad" class="w-pad" aria-label="اكتب الحرف بإصبعك على المسار"></canvas>
     <p id="wMsg" class="w-msg" role="status"></p>
     <div class="w-btns">
-      <button id="wWatch" class="btn alt">شاهد مرة أخرى</button>
-      <button id="wRetry" class="btn alt" hidden>أعد المحاولة</button>
-      <button id="wNext" class="btn" hidden>الحرف التالي</button>
+      <button id="wWatch" class="btn alt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>شاهد مرة أخرى</button>
+      <button id="wRetry" class="btn alt" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4v4h4"/></svg>أعد المحاولة</button>
+      <button id="wNext" class="btn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>الحرف التالي</button>
     </div>
   </dialog>
 </main>
@@ -204,6 +208,8 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
 const TRACKS = <?= json_encode($list, JSON_UNESCAPED_UNICODE) ?>;
 const KEY = Uint8Array.from(atob('<?= base64_encode($_SESSION['key']) ?>'), c => c.charCodeAt(0));
 </script>
+<script src="vendor/anime-4.5.0.umd.min.js"></script>
+<script src="party.js?v=<?= filemtime(__DIR__ . '/party.js') ?>"></script>
 <script src="player.js?v=<?= filemtime(__DIR__ . '/player.js') ?>"></script>
 <script src="guide.js?v=<?= filemtime(__DIR__ . '/guide.js') ?>"></script>
 <script src="writing.js?v=<?= filemtime(__DIR__ . '/writing.js') ?>"></script>

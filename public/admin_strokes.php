@@ -133,13 +133,13 @@ function render(list = strokes) {
     for (const i of skel) g.fillRect((i % N) * S / N, ((i / N) | 0) * S / N, S / N, S / N);
   }
   g.lineCap = g.lineJoin = 'round';
-  g.lineWidth = S * 0.025; g.strokeStyle = '#1f6f5c';
+  g.lineWidth = S * 0.025; g.strokeStyle = '#0070b2';
   list.forEach(s => guideLine(g, s, S));
-  if (live) { g.strokeStyle = '#ff5500'; guideLine(g, live, S); }
+  if (live) { g.strokeStyle = '#f14a26'; guideLine(g, live, S); }
   // stroke numbers at each start, so the order is visible
   g.font = `700 ${S * 0.035}px Vazirmatn, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   list.forEach((s, k) => {
-    g.fillStyle = '#ff5500'; g.beginPath(); g.arc(s[0][0] * S, s[0][1] * S, S * 0.025, 0, 7); g.fill();
+    g.fillStyle = '#f14a26'; g.beginPath(); g.arc(s[0][0] * S, s[0][1] * S, S * 0.025, 0, 7); g.fill();
     g.fillStyle = '#fff'; g.fillText(String(k + 1), s[0][0] * S, s[0][1] * S);
   });
 }

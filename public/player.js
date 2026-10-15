@@ -1,8 +1,9 @@
 // Player: decoding, waveform, swipeable cover, letter grid, shuffle/repeat, speed.
 // Expects TRACKS and KEY globals from index.php.
 const $ = id => document.getElementById(id);
-const PLAY = 'M8 5v14l11-7z', PAUSE = 'M6 5h4v14H6zm8 0h4v14h-4z';
-const BAR = 3, GAP = 1; // waveform bar width / gap in CSS px
+const PLAY = 'M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z',
+  PAUSE = 'M7 5h3.2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm6.8 0H17a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-3.2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z';
+const BAR = 7, GAP = 5; // waveform bar width / gap in CSS px: fat, round, toy-like
 // offset/pos are in seconds of the original recording, whatever the speed
 let ctx, buf, src, startAt = 0, offset = 0, playing = false, cur = -1, loadId = 0, rate = 1, stretched = {};
 let peaks = null, hover = -1, drag = null, drawn = '', raf = 0;
@@ -12,21 +13,27 @@ const pos = () => playing ? Math.min((ctx.currentTime - startAt) * rate, buf.dur
 
 // letters listened to the end, stored on the server so they follow the user to any device
 const done = new Set(TRACKS.flatMap((t, i) => t.done ? [i] : []));
+// returns the celebration (a promise) when the letter was just learned, else nothing
 function markDone(i) {
   if (done.has(i)) return;
   done.add(i);
   renderDone();
-  toast(done.size === TRACKS.length ? 'مبارك! أتممت جميع الحروف 🏆'
-    : done.size % 7 === 0 ? 'أحسنت! حصلت على وسام جديد 🏅'
-    : `أحسنت! نجمة لحرف ${TRACKS[i].title} ⭐`);
+  const all = done.size === TRACKS.length, medal = done.size % 7 === 0 ? $('medals').children[done.size / 7 - 1] : null;
   fetch('progress.php', { method: 'POST', headers: { 'X-Player': '1' }, body: new URLSearchParams({ t: i }) });
+  const party = celebrateLetter(i, { medal, all });
+  // the message comes once the star has landed, so it never hides the star's flight
+  party.then(() => toast(all ? 'مبارك! أتممت جميع الحروف' : medal ? 'أحسنت! حصلت على وسام جديد' : `أحسنت! نجمة لحرف ${TRACKS[i].title}`));
+  return party;
 }
+const MEDAL = '<svg viewBox="0 0 32 40" aria-hidden="true"><path d="M9 2h6l3 12h-6z" fill="#6ed2f2"/><path d="M23 2h-6l-3 12h6z" fill="#9560a6"/>'
+  + '<circle cx="16" cy="25" r="11" fill="#ffcb05" stroke="#e9a400" stroke-width="2.5"/>'
+  + '<path d="M16 19.5l1.7 3.4 3.8.6-2.7 2.6.6 3.7-3.4-1.8-3.4 1.8.6-3.7-2.7-2.6 3.8-.6z" fill="#fff"/></svg>';
 function renderDone() {
   [...$('list').children].forEach((b, j) => b.classList.toggle('done', done.has(j)));
   $('progress').textContent = `${done.size.toLocaleString('ar')} من ${TRACKS.length.toLocaleString('ar')} تم الاستماع إليها`;
   const medals = Math.floor(done.size / 7), slots = Math.floor(TRACKS.length / 7);
   $('medals').replaceChildren(...Array.from({ length: slots }, (_, k) =>
-    Object.assign(document.createElement('span'), { textContent: '🏅', className: k < medals ? 'on' : '' })));
+    Object.assign(document.createElement('span'), { innerHTML: MEDAL, className: k < medals ? 'on' : '' })));
   $('medals').ariaLabel = `${medals.toLocaleString('ar')} من ${slots.toLocaleString('ar')} أوسمة`;
   $('cert').hidden = done.size < TRACKS.length;
 }
@@ -50,6 +57,7 @@ TRACKS.forEach((t, i) => {
   $('list').append(b);
 });
 renderDone();
+enterGrid($('list'));
 
 // --- waveform ---
 function computePeaks(n) {
@@ -78,18 +86,20 @@ function draw() {
   const g = cv.getContext('2d');
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, w, h);
-  const base = h * 0.7; // SoundCloud style: bars above, faint reflection below
+  const x0 = (w - n * (BAR + GAP) + GAP) / 2; // centre the bars in the strip
   for (let i = 0; i < n; i++) {
-    const v = peaks ? Math.max(peaks[i], 0.03) : 0.03;
+    const v = peaks ? Math.max(peaks[i], 0.08) : 0.08;
     const on = i < played, hov = hover >= 0 && i < hover && !on;
-    g.fillStyle = on ? '#ff5500' : hov ? '#ffb38a' : '#c9c9c9';
-    g.fillRect(i * (BAR + GAP), base - v * base, BAR, v * base);
-    g.fillStyle = on ? '#ffbb99' : hov ? '#ffd9c4' : '#e6e6e6';
-    g.fillRect(i * (BAR + GAP), base + 1, BAR, v * (h - base - 1));
+    const bh = Math.max(BAR, v * h); // pill bars, mirrored around the middle line
+    g.fillStyle = on ? '#0070b2' : hov ? '#6ed2f2' : '#ffffffb3';
+    g.beginPath();
+    g.roundRect ? g.roundRect(x0 + i * (BAR + GAP), (h - bh) / 2, BAR, bh, BAR / 2) : g.rect(x0 + i * (BAR + GAP), (h - bh) / 2, BAR, bh); // roundRect: Safari 16+
+    g.fill();
   }
 }
 
-const ratioAt = e => { const r = $('wave').getBoundingClientRect(); return Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1); };
+// the page is right-to-left: the waveform starts at the right (the canvas is mirrored in CSS)
+const ratioAt = e => { const r = $('wave').getBoundingClientRect(); return Math.min(Math.max((r.right - e.clientX) / r.width, 0), 1); };
 $('wave').onpointermove = e => {
   hover = Math.floor(ratioAt(e) * $('cv').clientWidth / (BAR + GAP));
   redraw();
@@ -105,8 +115,8 @@ $('wave').onpointerdown = e => {
 $('wave').onpointerup = () => { if (drag !== null) { seek(drag); drag = null; } };
 $('wave').onkeydown = e => {
   if (!buf) return;
-  if (e.key === 'ArrowRight') seek(pos() + 5);
-  else if (e.key === 'ArrowLeft') seek(pos() - 5);
+  if (e.key === 'ArrowLeft') seek(pos() + 5); // right-to-left: forward is to the left
+  else if (e.key === 'ArrowRight') seek(pos() - 5);
   else if (e.key === ' ') { e.preventDefault(); playing ? pause() : play(); }
 };
 
@@ -121,11 +131,17 @@ function play() {
   stopSrc();
   src = ctx.createBufferSource();
   src.buffer = rate === 1 ? buf : (stretched[rate] ??= stretch(buf, rate));
-  src.connect(ctx.destination);
+  if (!meter) { meter = ctx.createAnalyser(); meter.fftSize = 512; meter.connect(ctx.destination); }
+  src.connect(meter);
   src.onended = () => {
-    playing = false; offset = 0; setIcon(); markDone(cur);
-    if (repeat === 'one') return play();
-    if (repeat === 'all' || shuffle || cur < TRACKS.length - 1) load(nextIndex()); // 'next' stops after the last letter
+    playing = false; offset = 0; setIcon();
+    const party = markDone(cur), id = loadId;
+    const go = () => {
+      if (id !== loadId || playing) return; // the child picked something else during the party
+      if (repeat === 'one') return play();
+      if (repeat === 'all' || shuffle || cur < TRACKS.length - 1) load(nextIndex()); // 'next' stops after the last letter
+    };
+    party ? party.then(go) : go(); // the next letter waits for the celebration
   };
   src.start(0, offset / rate);
   startAt = ctx.currentTime - offset / rate;
@@ -150,6 +166,7 @@ function setIcon() {
   $('icon').setAttribute('d', playing ? PAUSE : PLAY);
   $('play').ariaLabel = playing ? 'إيقاف مؤقت' : 'تشغيل';
   $('list').classList.toggle('playing', playing);
+  ambient(playing); // bubbles and stars drift behind the page while a song plays
   redraw();
 }
 
@@ -225,6 +242,12 @@ function show(i, scroll = true) {
   cur = i;
   redraw();
   $('title').textContent = TRACKS[i]?.title ?? '';
+  const glyph = TRACKS[i]?.glyph === 'ا' ? 'أ' : TRACKS[i]?.glyph || ''; // as printed on the card (display only: strokes key on the plain glyph)
+  if ($('badgeGlyph').textContent !== glyph) {
+    const first = !$('badgeGlyph').textContent;
+    $('badgeGlyph').textContent = glyph;
+    if (!first) swapBadge($('badgeGlyph'));
+  }
   $('writeBtn').hidden = !TRACKS[i]?.strokes;
   ensureImg(i - 1); ensureImg(i); ensureImg(i + 1);
   stripTo(i);
@@ -367,9 +390,43 @@ function stretch(b, r) {
 function redraw() { raf ||= requestAnimationFrame(tick); }
 function tick() {
   raf = 0;
-  if (buf) $('cur').textContent = fmt(drag ?? pos());
+  if (buf) {
+    const t = drag ?? pos();
+    $('cur').textContent = fmt(t);
+    $('wave').ariaValueNow = String(Math.round(t / buf.duration * 100));
+    $('wave').ariaValueText = `${fmt(t)} من ${fmt(buf.duration)}`;
+  }
   draw();
+  sing();
   if (playing || drag !== null) redraw();
+}
+
+// the letter sings: its badge hops and swells with the loudness of its own song
+let meter = null, level = 0, loud = 2, prevTarget = 0, lastBeat = 0;
+const still = matchMedia('(prefers-reduced-motion: reduce)');
+const wave = new Uint8Array(512);
+function sing() {
+  let target = 0;
+  if (playing && meter) {
+    meter.getByteTimeDomainData(wave);
+    let sum = 0;
+    for (const v of wave) sum += (v - 128) * (v - 128);
+    const rms = Math.sqrt(sum / wave.length);
+    loud = Math.max(rms, loud * 0.997, 2); // loudest moment so far, slowly forgotten: every song hops the same amount
+    target = (rms / loud) ** 2; // squared, so beats hop and the quiet parts rest
+    // a strong beat (loud and rising) sends a note out of the letter
+    const now = performance.now();
+    if (target > 0.5 && target > prevTarget * 1.25 && now - lastBeat > 380) { lastBeat = now; singNote($('badge')); }
+  }
+  prevTarget = target;
+  level += (target - level) * (target > level ? 0.5 : 0.15); // quick rise, slow fall
+  if (level < 0.002) level = 0;
+  // "reduce motion" (e.g. Windows' Animation effects off) gets a gentle pulse only: no hop, no tilt
+  $('badge').style.transform = !level ? '' : still.matches ? `scale(${1 + level * 0.05})`
+    : `translateY(${-level * 16}px) scale(${1 + level * 0.14}) rotate(${Math.sin(performance.now() / 260) * level * 6}deg)`;
+  // the card picture breathes with the song (about 1%); left still under "reduce motion"
+  $('cover').style.transform = level && !still.matches ? `scale(${1 + level * 0.012})` : '';
+  if (level && !playing) redraw(); // let it settle after a pause
 }
 addEventListener('resize', redraw);
 

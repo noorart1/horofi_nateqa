@@ -47,26 +47,26 @@ const pad = $('wPad'), pg = pad.getContext('2d');
 function render(anim) {
   const S = pad.width;
   pg.clearRect(0, 0, S, S);
-  guideGlyph(pg, TRACKS[W.i].glyph, S, '#ece7df');
+  guideGlyph(pg, TRACKS[W.i].glyph, S, '#dcedf7');
   pg.lineCap = pg.lineJoin = 'round';
   // every stroke as a dotted path
   pg.setLineDash([S * 0.004, S * 0.025]);
-  pg.lineWidth = S * 0.016; pg.strokeStyle = '#a89f94';
+  pg.lineWidth = S * 0.016; pg.strokeStyle = '#7fb3cf';
   W.strokes.forEach(s => guideLine(pg, s, S));
   pg.setLineDash([]);
   if (anim) { // the "watch" animation
-    pg.lineWidth = S * 0.045; pg.strokeStyle = '#1f6f5c';
+    pg.lineWidth = S * 0.045; pg.strokeStyle = '#0070b2';
     anim.forEach(s => guideLine(pg, s, S));
     return;
   }
   // the part already written, along the stations
-  pg.lineWidth = S * 0.045; pg.strokeStyle = '#1f6f5c';
+  pg.lineWidth = S * 0.045; pg.strokeStyle = '#0070b2';
   W.stations.forEach((st, k) => {
     if (k < W.si) guideLine(pg, st, S);
     else if (k === W.si && W.filled >= 0) guideLine(pg, st.slice(0, W.filled + 1), S);
   });
   // the child's real finger line
-  pg.lineWidth = S * 0.018; pg.strokeStyle = '#ff550099';
+  pg.lineWidth = S * 0.018; pg.strokeStyle = '#f14a2699';
   W.ink.forEach(l => guideLine(pg, l, S));
   if (!W.done) marker(S);
 }
@@ -100,7 +100,7 @@ async function openWriting(i) {
   ctx ??= new AudioContext(); ctx.resume(); // inside the click, so the letter's voice may play later (iOS)
   $('wTitle').textContent = `اكتب حرف ${TRACKS[i].title}`;
   $('wMsg').textContent = 'جارٍ التحميل…';
-  if (!$('writing').open) $('writing').showModal();
+  if (!$('writing').open) { $('writing').showModal(); openPad(pad); }
   try {
     const r = await fetch('strokes.php?t=' + i, { headers: { 'X-Player': '1' }, cache: 'no-store' });
     if (r.status === 403) return location.reload();
@@ -181,6 +181,8 @@ function advance(p) {
   const st = W.stations[W.si];
   while (W.filled + 1 < st.length && dist(p, st[W.filled + 1]) < TOL) W.filled++;
   if (W.filled === st.length - 1) {
+    const r = pad.getBoundingClientRect(), [ex, ey] = st.at(-1);
+    if (W.si < W.stations.length - 1) strokeSparkle(r.left + ex * r.width, r.top + ey * r.width); // the last one gets the big party
     W.si++; W.filled = -1; W.active = false; pointer = null; // next stroke starts with a new touch
     if (W.si === W.stations.length) return finish();
   }
@@ -191,8 +193,9 @@ function finish() {
   W.done = true;
   render();
   const ratio = W.total ? W.errors / W.total : 0, stars = ratio < 0.1 ? 3 : ratio < 0.25 ? 2 : 1;
-  $('wMsg').innerHTML = `<span class="stars">${'⭐'.repeat(stars)}</span><br>`;
+  $('wMsg').innerHTML = `<span class="stars">${`<b>${STAR}</b>`.repeat(stars)}</span><br>`;
   $('wMsg').append(['', 'أحسنت! حاول مرة أخرى لتحصل على نجوم أكثر', 'جيد جدًا!', 'ممتاز!'][stars]);
+  celebrateWriting($('wMsg').querySelectorAll('.stars b'), pad, stars);
   $('wRetry').hidden = false;
   $('wNext').hidden = nextWritable() < 0;
   say(W.i);
@@ -225,7 +228,7 @@ function nextWritable() {
 function renderStars() {
   [...$('list').children].forEach((b, j) => {
     const n = TRACKS[j].stars;
-    b.querySelector('.w').textContent = '★'.repeat(n);
+    b.querySelector('.w').innerHTML = '<i></i>'.repeat(n); // small stars drawn in CSS
     b.querySelector('.w').ariaLabel = n ? `الكتابة: ${n.toLocaleString('ar')} من ٣ نجوم` : null;
   });
 }

@@ -1,0 +1,556 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T15:40:25.380Z",
+  "title": "Design System: حروفي الناطقة",
+  "extensions": {
+    "colorMeta": {
+      "sun": {
+        "role": "secondary",
+        "displayName": "Sun Yellow",
+        "tonalRamp": [
+          "#4d3d02",
+          "#806603",
+          "#b38e04",
+          "#d9ad04",
+          "#ffcb05",
+          "#ffdb50",
+          "#ffe88f",
+          "#fff5cd"
+        ]
+      },
+      "sun-deep": {
+        "role": "secondary",
+        "displayName": "Marigold",
+        "tonalRamp": [
+          "#463100",
+          "#755200",
+          "#a37300",
+          "#c68b00",
+          "#e9a400",
+          "#f0bf4d",
+          "#f5d68c",
+          "#fbedcc"
+        ]
+      },
+      "blue": {
+        "role": "primary",
+        "displayName": "Logo Blue",
+        "tonalRamp": [
+          "#002235",
+          "#003859",
+          "#004e7d",
+          "#005f97",
+          "#0070b2",
+          "#4d9bc9",
+          "#8cbfdc",
+          "#cce2f0"
+        ]
+      },
+      "blue-deep": {
+        "role": "primary",
+        "displayName": "Deep Logo Blue",
+        "tonalRamp": [
+          "#001826",
+          "#002840",
+          "#00375a",
+          "#00436d",
+          "#004f80",
+          "#4d84a6",
+          "#8cb0c6",
+          "#ccdce6"
+        ]
+      },
+      "sky": {
+        "role": "tertiary",
+        "displayName": "Sky Ring",
+        "tonalRamp": [
+          "#213f49",
+          "#376979",
+          "#4d93a9",
+          "#5eb3ce",
+          "#6ed2f2",
+          "#9ae0f6",
+          "#beebf9",
+          "#e2f6fc"
+        ]
+      },
+      "berry": {
+        "role": "tertiary",
+        "displayName": "Card Red",
+        "tonalRamp": [
+          "#48160b",
+          "#792513",
+          "#a9341b",
+          "#cd3f20",
+          "#f14a26",
+          "#f58067",
+          "#f9ae9d",
+          "#fcdbd4"
+        ]
+      },
+      "purple": {
+        "role": "tertiary",
+        "displayName": "Ribbon Purple",
+        "tonalRamp": [
+          "#2d1d32",
+          "#4b3053",
+          "#684374",
+          "#7f528d",
+          "#9560a6",
+          "#b590c1",
+          "#cfb7d7",
+          "#eadfed"
+        ]
+      },
+      "leaf": {
+        "role": "tertiary",
+        "displayName": "Leaf Green",
+        "tonalRamp": [
+          "#253a14",
+          "#3e6121",
+          "#57882e",
+          "#69a538",
+          "#7cc242",
+          "#a3d47b",
+          "#c4e4aa",
+          "#e5f3d9"
+        ]
+      },
+      "go-green": {
+        "role": "tertiary",
+        "displayName": "Go Green",
+        "tonalRamp": [
+          "#0e2f1b",
+          "#174f2e",
+          "#206f40",
+          "#27864d",
+          "#2e9e5b",
+          "#6dbb8c",
+          "#a1d3b5",
+          "#d5ecde"
+        ]
+      },
+      "sky-pale": {
+        "role": "neutral",
+        "displayName": "Pale Sky",
+        "tonalRamp": [
+          "#3a3d3f",
+          "#5c6265",
+          "#7f878b",
+          "#a1acb0",
+          "#b8c4ca",
+          "#cfdde3",
+          "#dbe9ef",
+          "#e6f5fc"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Sky Line",
+        "tonalRamp": [
+          "#343a3d",
+          "#535c61",
+          "#727f85",
+          "#91a1a9",
+          "#a6b8c2",
+          "#bacfda",
+          "#c5dbe6",
+          "#cfe6f2"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep Ink Blue",
+        "tonalRamp": [
+          "#05111c",
+          "#091d2e",
+          "#0d2940",
+          "#0f314e",
+          "#123a5c",
+          "#59758d",
+          "#94a6b6",
+          "#d0d8de"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Slate Blue",
+        "tonalRamp": [
+          "#182027",
+          "#283641",
+          "#374b5b",
+          "#435b6f",
+          "#4f6b82",
+          "#8497a8",
+          "#b0bcc7",
+          "#dce1e6"
+        ]
+      },
+      "honey-ink": {
+        "role": "neutral",
+        "displayName": "Honey Ink",
+        "tonalRamp": [
+          "#201900",
+          "#362900",
+          "#4b3900",
+          "#5b4600",
+          "#6b5200",
+          "#97864d",
+          "#bcb18c",
+          "#e1dccc"
+        ]
+      },
+      "honey-toggle": {
+        "role": "neutral",
+        "displayName": "Honey Toggle",
+        "tonalRamp": [
+          "#251c00",
+          "#3d2f00",
+          "#554100",
+          "#684f00",
+          "#7a5d00",
+          "#a28e4d",
+          "#c3b68c",
+          "#e4dfcc"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card White"
+      },
+      "err": {
+        "role": "neutral",
+        "displayName": "Error",
+        "tonalRamp": [
+          "#3a0b08",
+          "#61130e",
+          "#881b13",
+          "#a52017",
+          "#c2261b",
+          "#d4675f",
+          "#e49d98",
+          "#f3d4d1"
+        ]
+      },
+      "err-tint": {
+        "role": "neutral",
+        "displayName": "Error Tint",
+        "tonalRamp": [
+          "#3f3a3a",
+          "#655d5c",
+          "#8b807f",
+          "#b1a2a1",
+          "#cabab8",
+          "#e4d1cf",
+          "#f0dcdb",
+          "#fde8e6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "glyph": {
+        "displayName": "Glyph",
+        "purpose": "The single letter in the badge, card red."
+      },
+      "glyph-tile": {
+        "displayName": "Tile glyph",
+        "purpose": "Letters on the grid tiles."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "The letter's name beside the badge, one line."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Certificate title."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Page and section headings, used at 1.5-1.7rem."
+      },
+      "message": {
+        "displayName": "Message",
+        "purpose": "Writing feedback and certificate lines, 1.25-1.3rem."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Button text and the toast, 1.05-1.1rem."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "General text; hints at line-height 1.8."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Form labels, hints, counts, tile names, .85-.95rem."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Time readouts, tabular figures."
+      }
+    },
+    "shadows": [
+      {
+        "name": "line-edge",
+        "value": "0 5px 0 #cfe6f2, 0 11px 14px -8px #00507a40",
+        "purpose": "Letter tiles and alt buttons; 3-4px versions on the active tab, top-row pill, thumbnails, close button."
+      },
+      {
+        "name": "card-edge",
+        "value": "0 8px 0 #cfe6f2, 0 18px 30px -18px #00507a55",
+        "purpose": "Login card; cover and writing pad use the 8px edge with a 20px/30px blur."
+      },
+      {
+        "name": "blue-edge",
+        "value": "0 5px 0 #004f80, 0 11px 14px -8px #00507a40",
+        "purpose": "Primary buttons, selected thumbnail; 6px on the toast."
+      },
+      {
+        "name": "play-edge",
+        "value": "0 8px 0 #004f80, 0 14px 20px -8px #003a5e88",
+        "purpose": "Giant play button."
+      },
+      {
+        "name": "sun-edge",
+        "value": "0 6px 0 #e9a400, 0 10px 16px -8px #0005",
+        "purpose": "Skip buttons on yellow; 4-5px on the active tile, certificate pill, writing pill."
+      },
+      {
+        "name": "pressed",
+        "value": "0 1px 0 <edge>, 0 2px 4px -2px #00507a33",
+        "purpose": "Any pressed button or tile, with a translateY of nearly the edge height."
+      },
+      {
+        "name": "panel",
+        "value": "0 10px 24px -10px #b07a0066, inset 0 -6px 0 #0000000d",
+        "purpose": "Yellow player panel."
+      },
+      {
+        "name": "badge-ring",
+        "value": "0 0 0 7px #6ed2f2, 0 0 0 11px #fff, 0 12px 18px -6px #00507a55",
+        "purpose": "Sky ring, white outer ring, soft drop around the letter badge."
+      },
+      {
+        "name": "input-focus",
+        "value": "0 0 0 4px #0070b222",
+        "purpose": "Halo on a focused input, with a blue border."
+      }
+    ],
+    "motion": [
+      {
+        "name": "press",
+        "value": ".12s cubic-bezier(.2,.8,.2,1)",
+        "purpose": "Hover lift and press-down on buttons and tiles. None under reduced motion."
+      },
+      {
+        "name": "swipe",
+        "value": ".38s cubic-bezier(.2,.8,.2,1)",
+        "purpose": "Cover picture strip slide."
+      },
+      {
+        "name": "toast",
+        "value": ".25s",
+        "purpose": "Toast slides down 20px and fades in."
+      },
+      {
+        "name": "sing",
+        "value": "rise 0.5, fall 0.15, gain memory 0.997/frame, target (rms/loudest)^2; translateY up to -16px, scale up to 1.14, sway up to 6deg, origin 50% 85%",
+        "purpose": "Letter badge driven by an AnalyserNode while playing; still under reduced motion."
+      },
+      {
+        "name": "burst",
+        "value": "900-1500ms; rise outCubic 40%, fall inQuad 60%; scale-in outBack(3) 180ms",
+        "purpose": "Confetti burst from a point (party palette)."
+      },
+      {
+        "name": "star-flight",
+        "value": "300ms outBack(2) pop, then 900ms arc (inOutSine x, outQuad/inQuad y), 150ms fade",
+        "purpose": "Star flies from the badge ring to the in-view tile or medal."
+      },
+      {
+        "name": "cheer",
+        "value": "900ms outElastic(1, .6), scale 1.35, rotate 360",
+        "purpose": "Badge cheer when a letter is learned."
+      },
+      {
+        "name": "pop",
+        "value": "700ms outQuad, scale to 1.15-1.6",
+        "purpose": "Target that just received a reward."
+      },
+      {
+        "name": "rain",
+        "value": "1800-3200ms inSine, delay up to 1400ms",
+        "purpose": "Full-screen confetti after 28 letters and on the certificate."
+      },
+      {
+        "name": "stars-in",
+        "value": "900ms outElastic(1, .5), stagger 180ms",
+        "purpose": "Writing-practice stars."
+      },
+      {
+        "name": "calm",
+        "value": "700ms inOutSine opacity 1-0.35-1 (stars: 500ms fade-in, 200ms stagger)",
+        "purpose": "Reduced-motion replacement for every celebration."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "grid-narrow",
+        "value": "560px"
+      },
+      {
+        "name": "hover",
+        "value": "(hover:hover)"
+      },
+      {
+        "name": "print",
+        "value": "print (certificate: buttons and confetti hidden)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Full-width blue pill with a deep-blue edge; presses down.",
+      "html": "<button class=\"ds-btn\">دخول</button>",
+      "css": ".ds-btn{width:100%;padding:13px;border:0;border-radius:999px;background:#0070b2;color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 5px 0 #004f80,0 11px 14px -8px #00507a40;transition:transform .12s,box-shadow .12s}.ds-btn:hover{transform:translateY(-2px)}.ds-btn:active{transform:translateY(4px);box-shadow:0 1px 0 #004f80,0 2px 4px -2px #00507a33}.ds-btn:focus-visible{outline:3px solid #0070b2;outline-offset:3px}"
+    },
+    {
+      "name": "Alt Button",
+      "kind": "button",
+      "refersTo": "button-alt",
+      "description": "White pill with a sky-line edge.",
+      "html": "<button class=\"ds-alt\">أعد المحاولة</button>",
+      "css": ".ds-alt{width:100%;padding:13px;border:0;border-radius:999px;background:#fff;color:#0070b2;font-family:Vazirmatn,Tahoma,sans-serif;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 5px 0 #cfe6f2,0 11px 14px -8px #00507a40;transition:transform .12s,box-shadow .12s}.ds-alt:hover{transform:translateY(-2px)}.ds-alt:active{transform:translateY(4px);box-shadow:0 1px 0 #cfe6f2,0 2px 4px -2px #00507a33}.ds-alt:focus-visible{outline:3px solid #0070b2;outline-offset:3px}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "White field with a sky-line border; blue border and halo on focus.",
+      "html": "<div class=\"ds-fld\" dir=\"rtl\"><label>رمز التفعيل</label><input placeholder=\"١٢٣٤\"></div>",
+      "css": ".ds-fld{font-family:Vazirmatn,Tahoma,sans-serif;color:#123a5c;max-width:320px}.ds-fld label{display:block;font-size:.95rem;margin:0 0 6px;color:#4f6b82;font-weight:600}.ds-fld input{width:100%;padding:12px 14px;border:2px solid #cfe6f2;border-radius:16px;font:inherit;background:#fff;color:#123a5c}.ds-fld input:focus{outline:none;border-color:#0070b2;box-shadow:0 0 0 4px #0070b222}"
+    },
+    {
+      "name": "Tabs",
+      "kind": "nav",
+      "refersTo": "tabs",
+      "description": "Pale-sky pill track; the active tab is a raised white pill.",
+      "html": "<div class=\"ds-tabs\" dir=\"rtl\"><button class=\"on\">تسجيل الدخول</button><button>حساب جديد</button></div>",
+      "css": ".ds-tabs{display:flex;gap:6px;background:#e6f5fc;padding:5px;border-radius:999px;max-width:380px}.ds-tabs button{flex:1;border:0;background:none;padding:10px 8px;border-radius:999px;font-family:Vazirmatn,Tahoma,sans-serif;color:#4f6b82;cursor:pointer}.ds-tabs button:hover{color:#004f80}.ds-tabs button.on{background:#fff;color:#004f80;font-weight:700;box-shadow:0 3px 0 #cfe6f2,0 9px 14px -8px #00507a40}.ds-tabs button:focus-visible{outline:3px solid #0070b2;outline-offset:3px}"
+    },
+    {
+      "name": "Letter Tile",
+      "kind": "card",
+      "refersTo": "letter-tile",
+      "description": "Grid tile: white default, sun yellow when current; drawn star when learned.",
+      "html": "<div class=\"ds-grid\" dir=\"rtl\"><button class=\"ds-tile\"><b>ب</b><span>باء</span><i></i></button><button class=\"ds-tile on\"><b>ت</b><span>تاء</span></button></div>",
+      "css": ".ds-grid{display:flex;gap:10px;background:#e6f5fc;padding:16px}.ds-tile{position:relative;width:84px;aspect-ratio:1/1.1;border:0;background:#fff;border-radius:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:Vazirmatn,Tahoma,sans-serif;color:#004f80;box-shadow:0 5px 0 #cfe6f2,0 11px 14px -8px #00507a40;transition:transform .12s,box-shadow .12s}.ds-tile b{font-family:Rubik,Vazirmatn,sans-serif;font-weight:800;font-size:2.6rem;line-height:1.1}.ds-tile span{font-size:.9rem;color:#4f6b82;font-weight:600}.ds-tile i{position:absolute;top:5px;left:6px;width:18px;height:18px;background:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z' fill='%23ffcb05' stroke='%23e9a400' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E\") center/contain no-repeat}.ds-tile:hover{transform:translateY(-3px);box-shadow:0 8px 0 #cfe6f2,0 14px 14px -8px #00507a40}.ds-tile:active{transform:translateY(4px);box-shadow:0 1px 0 #cfe6f2,0 2px 4px -2px #00507a33}.ds-tile.on{background:#ffcb05;box-shadow:0 5px 0 #e9a400,0 11px 14px -8px #00507a40}.ds-tile.on span{color:#6b5200}.ds-tile:focus-visible{outline:3px solid #0070b2;outline-offset:3px}"
+    },
+    {
+      "name": "Play Button",
+      "kind": "button",
+      "refersTo": "button-play",
+      "description": "The giant blue play/pause disc, the child's main control.",
+      "html": "<button class=\"ds-play\" aria-label=\"تشغيل\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z\"/></svg></button>",
+      "css": ".ds-play{width:116px;height:116px;border:0;border-radius:50%;display:grid;place-items:center;background:#0070b2;color:#fff;cursor:pointer;box-shadow:0 8px 0 #004f80,0 14px 20px -8px #003a5e88;transition:transform .12s cubic-bezier(.2,.8,.2,1),box-shadow .12s}.ds-play svg{width:48%;height:48%;fill:currentColor}.ds-play:hover{transform:translateY(-2px)}.ds-play:active{transform:translateY(6px);box-shadow:0 2px 0 #004f80,0 4px 8px -6px #003a5e88}.ds-play:focus-visible{outline:3px solid #0070b2;outline-offset:3px}"
+    },
+    {
+      "name": "Skip Button",
+      "kind": "button",
+      "refersTo": "button-skip",
+      "description": "White round previous/next buttons on the yellow panel.",
+      "html": "<div class=\"ds-field\"><button class=\"ds-skip\" aria-label=\"التالي\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M15 5l-7 7 7 7\"/></svg></button></div>",
+      "css": ".ds-field{background:#ffcb05;padding:20px;border-radius:28px;display:inline-block}.ds-skip{width:76px;height:76px;border:0;border-radius:50%;display:grid;place-items:center;background:#fff;color:#0070b2;cursor:pointer;box-shadow:0 6px 0 #e9a400,0 10px 16px -8px #0005;transition:transform .12s cubic-bezier(.2,.8,.2,1),box-shadow .12s}.ds-skip svg{width:46%;height:46%;fill:none;stroke:currentColor;stroke-width:3.6;stroke-linecap:round;stroke-linejoin:round}.ds-skip:hover{transform:translateY(-2px)}.ds-skip:active{transform:translateY(5px);box-shadow:0 1px 0 #e9a400,0 3px 6px -5px #0005}.ds-skip:focus-visible{outline:3px solid #0070b2;outline-offset:3px}"
+    },
+    {
+      "name": "Grown-up Toggle",
+      "kind": "chip",
+      "refersTo": "button-grown",
+      "description": "Small adult settings on the yellow panel; off and on states.",
+      "html": "<div class=\"ds-grown\"><button aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z\"/></svg></button><button class=\"on\" aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z\"/></svg></button><button class=\"sp\">×١</button></div>",
+      "css": ".ds-grown{display:inline-flex;gap:10px;background:#ffcb05;padding:12px;border-radius:18px}.ds-grown button{min-width:44px;height:44px;padding:0 10px;border:0;border-radius:14px;background:#ffffff66;color:#7a5d00;display:grid;place-items:center;cursor:pointer;font-family:Vazirmatn,Tahoma,sans-serif;transition:background .15s,color .15s}.ds-grown svg{width:22px;height:22px;fill:currentColor}.ds-grown button.on{background:#fff;color:#0070b2}.ds-grown .sp{font-weight:800;font-size:1rem}.ds-grown button:focus-visible{outline:3px solid #0070b2;outline-offset:3px}"
+    },
+    {
+      "name": "Letter Badge",
+      "kind": "custom",
+      "refersTo": "badge-letter",
+      "description": "White disc in the sky ring holding the letter in card red; it sings with the song's loudness.",
+      "html": "<div class=\"ds-badge\"><span>أ</span></div>",
+      "css": ".ds-badge{width:140px;height:140px;margin:16px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 7px #6ed2f2,0 0 0 11px #fff,0 12px 18px -6px #00507a55}.ds-badge span{font-family:Rubik,Vazirmatn,sans-serif;font-weight:800;font-size:5rem;line-height:1;color:#f14a26;translate:0 .04em}"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Blue pill with a drawn star announcing a reward.",
+      "html": "<div class=\"ds-toast\" dir=\"rtl\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z\" fill=\"#ffcb05\" stroke=\"#e9a400\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/></svg>أحسنت!</div>",
+      "css": ".ds-toast{display:inline-flex;align-items:center;gap:10px;background:#0070b2;color:#fff;padding:12px 22px 12px 18px;border-radius:999px;font-family:Vazirmatn,Tahoma,sans-serif;font-size:1.1rem;font-weight:700;box-shadow:0 6px 0 #004f80,0 16px 24px -12px #003a5e88}.ds-toast svg{width:26px;height:26px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Letter Sings",
+    "overview": "The whole site is a toy that sits beside the printed «حروفي الناطقة» cards, and its world comes from the cards and the header banner. The page ground is a pale sky. White cards and tiles sit on it, the player is a sun-yellow panel, the logo blue is the colour of action, the cards' sky ring circles the current letter, and the cards' red is the letter itself. The user is a 3 to 5 year old who can't read, with an adult beside them. So everything the child touches is big, round, coloured and drawn (SVG stars, medals, a trophy, icons, never emoji or typed symbols), while the grown-up settings are small and quiet.\n\nEverything is chunky and soft. Fat pills and discs press down like plastic buttons, letter tiles lift and sink, and corners run deep. The current letter sits in a white disc inside the sky ring and \"sings\": it hops with the loudness of its own recording. Rewards land where the child is looking: confetti in sun, sky, purple and green bursts from the badge, and a star flies to the learned letter's tile. Right to left throughout; progress fills from the right.\n\nAdmin pages are an operator tool outside this world. Only their canvas colours follow the palette.",
+    "keyCharacteristics": [
+      "Pale sky ground, white cards and tiles, a sun-yellow player panel, logo-blue action, a sky ring, red letters.",
+      "Rubik 800 for letters and headings; Vazirmatn for everything else.",
+      "Fat pills and discs with a solid tonal bottom edge plus a soft blur, pressing down on tap.",
+      "Pill waveform bars, blue for played, filling right to left.",
+      "A letter badge driven by the song's loudness; celebrations in party colours that always land on an in-view target.",
+      "Drawn SVG rewards, never emoji.",
+      "Child controls large; adult controls small and grouped apart."
+    ],
+    "rules": [
+      {
+        "name": "The One Blue Rule",
+        "body": "Blue means \"press this\" or \"already done\". Actions and progress are blue; decoration never is.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red Is For Letters Rule",
+        "body": "Card red is the letter: the glyph and the child's own tracing of it. It is never an error, a button or a confetti colour. Errors use their own red on a tint.",
+        "section": "colors"
+      },
+      {
+        "name": "The Party Palette Rule",
+        "body": "Celebrations use sun, marigold, sky, purple, leaf green and white only. No letter red and no action blue, so a reward never looks like a letter or a button.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable Hamza Rule",
+        "body": "A display face must render hamza, madda and dots unambiguously on every letter. Baloo Bhaijaan 2 was rejected because its hamza on «ألف» reads as a fatha. The badge shows alif as «أ», as printed on the card (display only; stroke data keys on the plain glyph). Check all 28 letters before adopting any new display face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Guide Font Rule",
+        "body": "The writing-practice guide letters (`public/guide.js`, `700 Vazirmatn`) must stay in Vazirmatn. Their stored stroke coordinates are relative to Vazirmatn's glyph shapes; changing the font misaligns every tracing path.",
+        "section": "typography"
+      },
+      {
+        "name": "The Same-Hue Edge Rule",
+        "body": "A raised element's solid edge is a deeper tone of the element or of the ground beneath it, and it is always paired with a soft blur. Never a black or ink-coloured hard offset, and never a bare edge without the blur.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** use the pale sky ground, white cards and tiles, the sun-yellow player panel and blue actions on every child-facing surface.",
+      "**Do** keep the letter glyph and the child's tracing in card red, and letters and headings in Rubik 800.",
+      "**Do** give every child control at least 52px (the play button 92px or more) and a press-down motion with a tonal solid edge plus a soft blur.",
+      "**Do** draw icons and rewards (stars, medals, trophy, close cross) as inline SVG.",
+      "**Do** keep adult settings small, quiet and grouped apart from the child controls.",
+      "**Do** fill progress right to left.",
+      "**Do** land every celebration on a target the child can see, and reduce it to an opacity fade under `prefers-reduced-motion`.",
+      "**Do** keep the writing-practice guide letters in Vazirmatn."
+    ],
+    "donts": [
+      "**Don't** use emoji or typed symbols as icons or rewards.",
+      "**Don't** adopt a display face whose hamza or dots can be misread; Baloo Bhaijaan 2 is rejected.",
+      "**Don't** use black or ink-coloured hard offset shadows, or a solid edge without its blur.",
+      "**Don't** use card red or action blue in confetti, or card red for errors or buttons.",
+      "**Don't** use thin grey bars or square bars in the waveform.",
+      "**Don't** let a reward play off-screen where the child can't see it."
+    ]
+  }
+}

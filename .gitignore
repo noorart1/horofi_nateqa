@@ -6,3 +6,7 @@ Master G2/
 *.webp
 *.mp3
 public/img/
+
+# design-review screenshots show the card art (private, like public/img/); tool cache
+.impeccable/review/
+.impeccable/hook.cache.json

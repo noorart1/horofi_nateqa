@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "public/player.js"
+        ],
+        "createdAt": "2026-10-15T13:33:47.171Z",
+        "reason": "Claude: thumbnail <img> template in innerHTML gets its src assigned on the next line"
+      }
+    ]
+  }
+}

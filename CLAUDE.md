@@ -7,12 +7,14 @@ Site for learning the Arabic letters: a user registers with a one-time license c
 - The project owner chats in Persian, so replies to them are in Persian.
 
 ## Stack
-Plain PHP 8 + PDO (MySQL/MariaDB on the server, SQLite locally), no framework, no Composer, no build step; it should run on any shared host with PHP. Frontend is vanilla JS + CSS.
+Plain PHP 8 + PDO (MySQL/MariaDB on the server, SQLite locally), no framework, no Composer, no build step; it should run on any shared host with PHP. Frontend is vanilla JS + CSS; the one library is anime.js 4.5.0 (the owner's choice, for celebrations), vendored in `public/vendor/` (never a CDN).
 
 ## Layout
 - `public/`: **web root** (the subdomain's document root must point here)
   - `index.php`: login / register / password reset (with the license code) and the player page
   - `player.js`: player (Web Audio decoding via `fetchTrack()`, waveform, swipeable cover, thumbnails, letter grid, shuffle/repeat, speed with WSOLA, stars/medals)
+  - `party.js`: celebrations with anime.js (confetti burst/rain, the star that flies to a learned letter, medal pops); resolves at once with an opacity-only reward under reduced motion
+  - `vendor/anime-4.5.0.umd.min.js`: anime.js (MIT, license beside it)
   - `guide.js`: draws the guide letter (`guideGlyph()`) and the writing animation; shared by `writing.js` and `admin_strokes.php` so stroke coordinates line up
   - `writing.js`: writing practice overlay, guided mode (stations along each stroke, stars by off-path ratio, plays the letter via `fetchTrack()`)
   - `strokes.php`: a letter's stroke paths, only to a logged-in user sending `X-Player: 1`
@@ -30,6 +32,7 @@ Plain PHP 8 + PDO (MySQL/MariaDB on the server, SQLite locally), no framework, n
 - CLI scripts: `import_codes.php [file.xlsx]`, `make_admin.php <user> [password|--remove]`, `backup.php`
 
 ## Rules
+- Design: `DESIGN.md` (tokens, rules) and `PRODUCT.md` (users: 3–5 year olds with an adult). UI changes follow them.
 - Tables: `users`, `codes`, `fails`, `progress` (listened letters), `strokes` (track → JSON `[[[x,y],…],…]`, 0..1 of the guide square, writing order: body first, each dot its own one-point stroke), `writing` (best stars per user and letter). `progress`, `strokes` and `writing` key letters by the mp3 basename.
 - Deleting a user must also delete their `progress` and `writing` rows and free their code.
 - Tracks are the sorted `data/media/*.mp3`; the number prefix (`02 Ba …`) gives the Arabic name/letter in `lib.php`.

@@ -18,7 +18,14 @@ if (!is_file($out)) {
         http_response_code(500);
         exit;
     }
-    if (imagesx($im) > $width) $im = imagescale($im, $width, -1, IMG_BICUBIC);
+    if (imagesx($im) > $width) { // imagecopyresampled: imagescale(IMG_BICUBIC) returns false on some system GD builds
+        $h = (int)round(imagesy($im) * $width / imagesx($im));
+        $small = imagecreatetruecolor($width, $h);
+        imagealphablending($small, false);
+        imagesavealpha($small, true); // keep PNG transparency
+        imagecopyresampled($small, $im, 0, 0, 0, 0, $width, $h, imagesx($im), imagesy($im));
+        $im = $small;
+    }
     @mkdir(dirname($out), 0775, true);
     $tmp = "$out." . getmypid();
     imagewebp($im, $tmp, 80);

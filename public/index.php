@@ -35,26 +35,28 @@ if ($action === 'logout') {
         $err = 'يجب ألا تقل كلمة المرور عن ٦ أحرف.';
     } else {
         $db = db();
-        $db->exec('BEGIN IMMEDIATE');
         $s = $db->prepare('SELECT 1 FROM codes WHERE code = ? AND user_id IS NULL');
         $s->execute([$code]);
+        $u = $db->prepare('SELECT 1 FROM users WHERE username = ?');
+        $u->execute([$username]);
         if (!$s->fetchColumn()) {
-            $db->exec('ROLLBACK');
             record_fail();
             $err = 'رمز التفعيل غير صالح أو تم استخدامه من قبل.';
+        } elseif ($u->fetchColumn()) {
+            $err = 'اسم المستخدم هذا مستخدم بالفعل.';
         } else {
-            $s = $db->prepare('SELECT 1 FROM users WHERE username = ?');
-            $s->execute([$username]);
-            if ($s->fetchColumn()) {
-                $db->exec('ROLLBACK');
-                $err = 'اسم المستخدم هذا مستخدم بالفعل.';
-            } else {
-                $db->prepare('INSERT INTO users(username, pass) VALUES (?, ?)')->execute([$username, password_hash($password, PASSWORD_DEFAULT)]);
-                $id = (int)$db->lastInsertId();
-                $db->prepare('UPDATE codes SET user_id = ? WHERE code = ?')->execute([$id, $code]);
-                $db->exec('COMMIT');
+            $db->beginTransaction();
+            $db->prepare('INSERT INTO users(username, pass) VALUES (?, ?)')->execute([$username, password_hash($password, PASSWORD_DEFAULT)]);
+            $id = (int)$db->lastInsertId();
+            // claiming the code only if still free makes two registrations with one code at once safe
+            $claim = $db->prepare('UPDATE codes SET user_id = ? WHERE code = ? AND user_id IS NULL');
+            $claim->execute([$id, $code]);
+            if ($claim->rowCount() === 1) {
+                $db->commit();
                 login_as($id);
             }
+            $db->rollBack();
+            $err = 'رمز التفعيل غير صالح أو تم استخدامه من قبل.';
         }
     }
 } elseif ($action === 'reset') {

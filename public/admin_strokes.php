@@ -43,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare('DELETE FROM strokes WHERE track = ?')->execute([basename($files[$t])]);
         $_SESSION['flash'] = 'تم حذف مسار الحرف.';
     } else {
-        $db->prepare("INSERT OR REPLACE INTO strokes(track, data, updated) VALUES (?, ?, datetime('now'))")
-            ->execute([basename($files[$t]), json_encode($strokes)]);
+        $db->prepare('REPLACE INTO strokes(track, data, updated) VALUES (?, ?, ?)') // REPLACE works in MySQL and SQLite
+            ->execute([basename($files[$t]), json_encode($strokes), gmdate(NOW)]);
         $_SESSION['flash'] = 'تم حفظ مسار الحرف.';
     }
     header("Location: admin_strokes.php?t=$t");

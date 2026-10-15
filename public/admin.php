@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = 'تم حذف المستخدم وأصبح رمز التفعيل متاحًا من جديد.';
             break;
         case 'add_codes':
-            $ins = $db->prepare('INSERT OR IGNORE INTO codes(code) VALUES (?)');
+            $ins = $db->prepare(insert_ignore() . ' INTO codes(code) VALUES (?)');
             $n = 0;
             foreach (preg_split('/\s+/', trim($_POST['codes'] ?? '')) as $c) {
                 if ($c !== '' && $ins->execute([$c])) $n += $ins->rowCount();

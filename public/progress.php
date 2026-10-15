@@ -13,5 +13,5 @@ if (!$file) {
     http_response_code(404);
     exit;
 }
-db()->prepare('INSERT OR IGNORE INTO progress(user_id, track) VALUES (?, ?)')->execute([$u['id'], basename($file)]);
+db()->prepare(insert_ignore() . ' INTO progress(user_id, track) VALUES (?, ?)')->execute([$u['id'], basename($file)]);
 http_response_code(204);

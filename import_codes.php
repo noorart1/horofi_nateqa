@@ -12,7 +12,7 @@ if (($xml = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
 }
 $sheet = new SimpleXMLElement($zip->getFromName('xl/worksheets/sheet1.xml'));
 
-$ins = db()->prepare('INSERT OR IGNORE INTO codes(code) VALUES (?)');
+$ins = db()->prepare(insert_ignore() . ' INTO codes(code) VALUES (?)');
 db()->beginTransaction();
 $total = $new = 0;
 foreach ($sheet->sheetData->row as $row) {

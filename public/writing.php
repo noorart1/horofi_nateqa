@@ -14,6 +14,8 @@ if (!$file) {
     exit;
 }
 $stars = min(max((int)($_POST['stars'] ?? 0), 1), 3);
-db()->prepare('INSERT INTO writing(user_id, track, stars) VALUES (?, ?, ?)
-    ON CONFLICT(user_id, track) DO UPDATE SET stars = MAX(stars, excluded.stars)')->execute([$u['id'], basename($file), $stars]);
+// keep the best score: add the row if new, else raise it (two statements that work in MySQL and SQLite)
+$key = [$u['id'], basename($file)];
+db()->prepare(insert_ignore() . ' INTO writing(user_id, track, stars) VALUES (?, ?, ?)')->execute([...$key, $stars]);
+db()->prepare('UPDATE writing SET stars = ? WHERE user_id = ? AND track = ? AND stars < ?')->execute([$stars, ...$key, $stars]);
 http_response_code(204);

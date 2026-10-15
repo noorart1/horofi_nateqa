@@ -12,37 +12,63 @@ if (PHP_SAPI !== 'cli') {
     header("Content-Security-Policy: frame-ancestors 'none'");
 }
 
+/**
+ * MySQL when data/config.php exists (the server), else SQLite in data/app.db (local).
+ * data/config.php: <?php return ['dsn' => 'mysql:host=localhost;dbname=…;charset=utf8mb4', 'user' => '…', 'pass' => '…'];
+ */
 function db(): PDO
 {
     static $db;
     if (!$db) {
-        $db = new PDO('sqlite:' . ROOT . '/data/app.db', null, null, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        ]);
-        $db->exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
-            CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL COLLATE NOCASE,
-                pass TEXT NOT NULL, created TEXT DEFAULT CURRENT_TIMESTAMP);
-            CREATE TABLE IF NOT EXISTS codes(code TEXT PRIMARY KEY, user_id INTEGER UNIQUE REFERENCES users(id));
-            CREATE TABLE IF NOT EXISTS fails(ip TEXT NOT NULL, at INTEGER NOT NULL);
-            CREATE TABLE IF NOT EXISTS progress(user_id INTEGER NOT NULL, track TEXT NOT NULL, PRIMARY KEY(user_id, track));
-            CREATE TABLE IF NOT EXISTS strokes(track TEXT PRIMARY KEY, data TEXT, updated TEXT);
-            CREATE TABLE IF NOT EXISTS writing(user_id INTEGER, track TEXT, stars INTEGER, PRIMARY KEY(user_id, track));');
+        $opts = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC];
+        $cfg = is_file(ROOT . '/data/config.php') ? require ROOT . '/data/config.php' : null;
+        if ($cfg) {
+            $db = new PDO($cfg['dsn'], $cfg['user'], $cfg['pass'], $opts);
+            $db->exec("SET time_zone = '+00:00'"); // timestamps in UTC, like SQLite
+            [$id, $nocase, $table] = ['INT AUTO_INCREMENT PRIMARY KEY', '', ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'];
+        } else {
+            $db = new PDO('sqlite:' . ROOT . '/data/app.db', null, null, $opts);
+            $db->exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
+            [$id, $nocase, $table] = ['INTEGER PRIMARY KEY', ' COLLATE NOCASE', '']; // MySQL's default collation already ignores case
+        }
+        // types valid in both databases; keys are VARCHAR(191) so MySQL can index them in utf8mb4
+        foreach ([
+            "users(id $id, username VARCHAR(191) NOT NULL UNIQUE$nocase, pass VARCHAR(255) NOT NULL, created DATETIME DEFAULT CURRENT_TIMESTAMP)",
+            'codes(code VARCHAR(191) PRIMARY KEY, user_id INT UNIQUE)',
+            'fails(ip VARCHAR(45) NOT NULL, at INT NOT NULL)',
+            'progress(user_id INT NOT NULL, track VARCHAR(191) NOT NULL, PRIMARY KEY(user_id, track))',
+            'strokes(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)',
+            'writing(user_id INT NOT NULL, track VARCHAR(191) NOT NULL, stars INT, PRIMARY KEY(user_id, track))',
+        ] as $t) $db->exec("CREATE TABLE IF NOT EXISTS $t$table");
         // columns added after the first release
-        $cols = array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
-        foreach (['token TEXT', 'is_admin INTEGER NOT NULL DEFAULT 0', 'last_login TEXT'] as $col) {
+        $cols = $cfg ? array_column($db->query('SHOW COLUMNS FROM users')->fetchAll(), 'Field')
+            : array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
+        foreach (['token VARCHAR(64)', 'is_admin INT NOT NULL DEFAULT 0', 'last_login DATETIME'] as $col) {
             if (!in_array(explode(' ', $col)[0], $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN $col");
         }
     }
     return $db;
 }
 
+function is_mysql(): bool
+{
+    return db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+}
+
+/** "INSERT IGNORE" (MySQL) / "INSERT OR IGNORE" (SQLite): skip rows whose key already exists. */
+function insert_ignore(): string
+{
+    return is_mysql() ? 'INSERT IGNORE' : 'INSERT OR IGNORE';
+}
+
+const NOW = 'Y-m-d H:i:s'; // gmdate(NOW): current UTC time for DATETIME columns, in both databases
+
 /** Start a session for user $id. The new token logs out any other device of this user. */
 function login_as(int $id): never
 {
     session_regenerate_id(true);
     $token = bin2hex(random_bytes(16));
-    db()->prepare("UPDATE users SET token = ?, last_login = datetime('now') WHERE id = ?")->execute([$token, $id]);
+    db()->prepare('UPDATE users SET token = ?, last_login = ? WHERE id = ?')->execute([$token, gmdate(NOW), $id]);
     $_SESSION = ['uid' => $id, 'token' => $token, 'key' => random_bytes(32)];
     header('Location: ./');
     exit;

@@ -11,8 +11,8 @@ if (!in_array($width, IMAGE_WIDTHS, true) || !preg_match('/^[\w.-]+\.(webp|jpe?g
     exit;
 }
 
-$out = ROOT . "/data/cache/$name-$width.webp";
-if (!is_file($out) || filemtime($out) < filemtime($src)) {
+$out = ROOT . "/data/cache/$name-$width-" . image_version($src) . '.webp'; // a replaced image gets a new cache file
+if (!is_file($out)) {
     $im = imagecreatefromstring(file_get_contents($src));
     if (!$im) {
         http_response_code(500);

@@ -39,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->beginTransaction();
             $db->prepare('UPDATE codes SET user_id = NULL WHERE user_id = ?')->execute([$id]);
             $db->prepare('DELETE FROM progress WHERE user_id = ?')->execute([$id]);
+            $db->prepare('DELETE FROM writing WHERE user_id = ?')->execute([$id]);
             $db->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
             $db->commit();
             $msg = 'تم حذف المستخدم وأصبح رمز التفعيل متاحًا من جديد.';
@@ -62,7 +63,8 @@ unset($_SESSION['flash']);
 $stats = $db->query('SELECT COUNT(*) total, COUNT(user_id) used FROM codes')->fetch();
 $q = trim($_GET['q'] ?? '');
 $s = $db->prepare("SELECT u.id, u.username, u.created, u.last_login, u.is_admin, u.token IS NOT NULL online, c.code,
-        (SELECT COUNT(*) FROM progress p WHERE p.user_id = u.id) heard
+        (SELECT COUNT(*) FROM progress p WHERE p.user_id = u.id) heard,
+        (SELECT COUNT(*) FROM writing w WHERE w.user_id = u.id) wrote
     FROM users u LEFT JOIN codes c ON c.user_id = u.id
     WHERE :q = '' OR u.username LIKE :like OR c.code = :q
     ORDER BY u.id DESC LIMIT 200");
@@ -117,7 +119,7 @@ textarea { width:100%; min-height:90px; margin:10px 0; padding:10px; border:1px 
 </head>
 <body>
 <main class="admin">
-  <div class="bar-top"><h1>لوحة الإدارة</h1><a href="./">العودة إلى المشغّل</a></div>
+  <div class="bar-top"><h1>لوحة الإدارة</h1><span><a href="admin_strokes.php">مسارات الكتابة</a> · <a href="./">العودة إلى المشغّل</a></span></div>
   <?php if ($msg): ?><p class="ok" role="status"><?= $h($msg) ?></p><?php endif ?>
 
   <div class="stats">
@@ -135,7 +137,7 @@ textarea { width:100%; min-height:90px; margin:10px 0; padding:10px; border:1px 
 
   <div class="box" style="overflow-x:auto">
     <table class="tbl">
-      <tr><th>المستخدم</th><th>رمز التفعيل</th><th class="hide-sm">التسجيل</th><th class="hide-sm">آخر دخول</th><th class="hide-sm">الاستماع</th><th>إجراءات</th></tr>
+      <tr><th>المستخدم</th><th>رمز التفعيل</th><th class="hide-sm">التسجيل</th><th class="hide-sm">آخر دخول</th><th class="hide-sm">الاستماع</th><th class="hide-sm">الكتابة</th><th>إجراءات</th></tr>
       <?php foreach ($users as $u): ?>
       <tr>
         <td class="ltr"><span class="dot <?= $u['online'] ? 'on' : '' ?>" title="<?= $u['online'] ? 'جلسة نشطة' : 'لا توجد جلسة' ?>"></span><?= $h($u['username']) ?><?= $u['is_admin'] ? ' (مدير)' : '' ?></td>
@@ -143,6 +145,7 @@ textarea { width:100%; min-height:90px; margin:10px 0; padding:10px; border:1px 
         <td class="ltr hide-sm"><?= $h(substr((string)$u['created'], 0, 10)) ?></td>
         <td class="ltr hide-sm"><?= $h(substr((string)$u['last_login'], 0, 16)) ?></td>
         <td class="hide-sm"><?= (int)$u['heard'] ?> / <?= $tracks ?></td>
+        <td class="hide-sm"><?= (int)$u['wrote'] ?> / <?= $tracks ?></td>
         <td>
           <div class="acts">
             <form method="post">
@@ -164,7 +167,7 @@ textarea { width:100%; min-height:90px; margin:10px 0; padding:10px; border:1px 
         </td>
       </tr>
       <?php endforeach ?>
-      <?php if (!$users): ?><tr><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مستخدمون.</td></tr><?php endif ?>
+      <?php if (!$users): ?><tr><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد مستخدمون.</td></tr><?php endif ?>
     </table>
   </div>
 

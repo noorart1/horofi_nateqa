@@ -7,6 +7,9 @@ const MAX_FAILS = 10; // failed login/register attempts per IP per hour
 if (PHP_SAPI !== 'cli') {
     session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS'])]);
     session_start();
+    // no page of the site may be framed (clickjacking)
+    header('X-Frame-Options: DENY');
+    header("Content-Security-Policy: frame-ancestors 'none'");
 }
 
 function db(): PDO
@@ -22,7 +25,9 @@ function db(): PDO
                 pass TEXT NOT NULL, created TEXT DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE IF NOT EXISTS codes(code TEXT PRIMARY KEY, user_id INTEGER UNIQUE REFERENCES users(id));
             CREATE TABLE IF NOT EXISTS fails(ip TEXT NOT NULL, at INTEGER NOT NULL);
-            CREATE TABLE IF NOT EXISTS progress(user_id INTEGER NOT NULL, track TEXT NOT NULL, PRIMARY KEY(user_id, track));');
+            CREATE TABLE IF NOT EXISTS progress(user_id INTEGER NOT NULL, track TEXT NOT NULL, PRIMARY KEY(user_id, track));
+            CREATE TABLE IF NOT EXISTS strokes(track TEXT PRIMARY KEY, data TEXT, updated TEXT);
+            CREATE TABLE IF NOT EXISTS writing(user_id INTEGER, track TEXT, stars INTEGER, PRIMARY KEY(user_id, track));');
         // columns added after the first release
         $cols = array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
         foreach (['token TEXT', 'is_admin INTEGER NOT NULL DEFAULT 0', 'last_login TEXT'] as $col) {
@@ -100,9 +105,21 @@ function track_image_file(int $i): ?string
 
 const IMAGE_WIDTHS = [240, 1200]; // thumbnail, cover
 
-/** URL of a resized WebP copy; the mtime in the URL lets browsers cache it forever. */
+/** Version of an image file: copying a file on Windows keeps its old mtime, so the size counts too. */
+function image_version(string $file): string
+{
+    return filemtime($file) . '-' . filesize($file);
+}
+
+/** URL of a resized WebP copy of public/img/$name; the version in the URL lets browsers cache it forever. */
+function image_url(string $name, int $width): string
+{
+    $f = ROOT . '/public/img/' . $name;
+    return is_file($f) ? 'img.php?f=' . rawurlencode($name) . "&w=$width&v=" . image_version($f) : '';
+}
+
 function track_image(int $i, int $width): string
 {
     $f = track_image_file($i);
-    return $f ? 'img.php?f=' . rawurlencode(basename($f)) . "&w=$width&v=" . filemtime($f) : '';
+    return $f ? image_url(basename($f), $width) : '';
 }

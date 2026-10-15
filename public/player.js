@@ -5,7 +5,7 @@ const PLAY = 'M8 5v14l11-7z', PAUSE = 'M6 5h4v14H6zm8 0h4v14h-4z';
 const BAR = 3, GAP = 1; // waveform bar width / gap in CSS px
 // offset/pos are in seconds of the original recording, whatever the speed
 let ctx, buf, src, startAt = 0, offset = 0, playing = false, cur = -1, loadId = 0, rate = 1, stretched = {};
-let peaks = null, hover = -1, drag = null;
+let peaks = null, hover = -1, drag = null, drawn = '', raf = 0;
 
 const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 const pos = () => playing ? Math.min((ctx.currentTime - startAt) * rate, buf.duration) : offset;
@@ -16,18 +16,33 @@ function markDone(i) {
   if (done.has(i)) return;
   done.add(i);
   renderDone();
+  toast(done.size === TRACKS.length ? 'مبارك! أتممت جميع الحروف 🏆'
+    : done.size % 7 === 0 ? 'أحسنت! حصلت على وسام جديد 🏅'
+    : `أحسنت! نجمة لحرف ${TRACKS[i].title} ⭐`);
   fetch('progress.php', { method: 'POST', headers: { 'X-Player': '1' }, body: new URLSearchParams({ t: i }) });
 }
 function renderDone() {
   [...$('list').children].forEach((b, j) => b.classList.toggle('done', done.has(j)));
   $('progress').textContent = `${done.size.toLocaleString('ar')} من ${TRACKS.length.toLocaleString('ar')} تم الاستماع إليها`;
+  const medals = Math.floor(done.size / 7), slots = Math.floor(TRACKS.length / 7);
+  $('medals').replaceChildren(...Array.from({ length: slots }, (_, k) =>
+    Object.assign(document.createElement('span'), { textContent: '🏅', className: k < medals ? 'on' : '' })));
+  $('medals').ariaLabel = `${medals.toLocaleString('ar')} من ${slots.toLocaleString('ar')} أوسمة`;
+  $('cert').hidden = done.size < TRACKS.length;
+}
+let toastTimer;
+function toast(text) {
+  $('toast').textContent = text;
+  $('toast').classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.remove('on'), 3000);
 }
 
 TRACKS.forEach((t, i) => {
   const b = document.createElement('button');
   b.className = 'letter';
   b.ariaLabel = t.title;
-  b.innerHTML = '<span class="num"></span><span class="g"></span><span class="n"></span><span class="eq"><i></i><i></i><i></i></span>';
+  b.innerHTML = '<span class="num"></span><span class="g"></span><span class="n"></span><span class="w"></span><span class="eq"><i></i><i></i><i></i></span>';
   b.querySelector('.num').textContent = (i + 1).toLocaleString('ar');
   b.querySelector('.g').textContent = t.glyph || t.title;
   b.querySelector('.n').textContent = t.title;
@@ -53,12 +68,17 @@ function draw() {
   const cv = $('cv'), dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
   if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; peaks = null; }
   const n = Math.floor(w / (BAR + GAP));
-  if (buf && (!peaks || peaks.length !== n)) peaks = computePeaks(n);
+  const stale = !peaks || peaks.length !== n;
+  if (buf && stale) peaks = computePeaks(n);
+  const played = buf ? (drag ?? pos()) / buf.duration * n : 0;
+  // repaint only when a bar changes colour, not every frame (battery)
+  const key = `${n}|${Math.ceil(played)}|${hover}`;
+  if (!stale && key === drawn) return;
+  drawn = key;
   const g = cv.getContext('2d');
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, w, h);
   const base = h * 0.7; // SoundCloud style: bars above, faint reflection below
-  const played = buf ? (drag ?? pos()) / buf.duration * n : 0;
   for (let i = 0; i < n; i++) {
     const v = peaks ? Math.max(peaks[i], 0.03) : 0.03;
     const on = i < played, hov = hover >= 0 && i < hover && !on;
@@ -72,13 +92,15 @@ function draw() {
 const ratioAt = e => { const r = $('wave').getBoundingClientRect(); return Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1); };
 $('wave').onpointermove = e => {
   hover = Math.floor(ratioAt(e) * $('cv').clientWidth / (BAR + GAP));
+  redraw();
   if (drag !== null) drag = ratioAt(e) * buf.duration;
 };
-$('wave').onpointerleave = () => hover = -1;
+$('wave').onpointerleave = () => { hover = -1; redraw(); };
 $('wave').onpointerdown = e => {
   if (!buf) return;
   $('wave').setPointerCapture(e.pointerId);
   drag = ratioAt(e) * buf.duration;
+  redraw();
 };
 $('wave').onpointerup = () => { if (drag !== null) { seek(drag); drag = null; } };
 $('wave').onkeydown = e => {
@@ -103,7 +125,7 @@ function play() {
   src.onended = () => {
     playing = false; offset = 0; setIcon(); markDone(cur);
     if (repeat === 'one') return play();
-    if (repeat === 'all') load(nextIndex()); // otherwise stop after this letter
+    if (repeat === 'all' || shuffle || cur < TRACKS.length - 1) load(nextIndex()); // 'next' stops after the last letter
   };
   src.start(0, offset / rate);
   startAt = ctx.currentTime - offset / rate;
@@ -121,12 +143,14 @@ function pause() {
 function seek(t) {
   offset = Math.min(Math.max(t, 0), buf.duration - 0.05);
   if (playing) play();
+  redraw();
 }
 
 function setIcon() {
   $('icon').setAttribute('d', playing ? PAUSE : PLAY);
   $('play').ariaLabel = playing ? 'إيقاف مؤقت' : 'تشغيل';
   $('list').classList.toggle('playing', playing);
+  redraw();
 }
 
 // --- swipeable cover ---
@@ -199,7 +223,9 @@ function select(i) {
 
 function show(i, scroll = true) {
   cur = i;
+  redraw();
   $('title').textContent = TRACKS[i]?.title ?? '';
+  $('writeBtn').hidden = !TRACKS[i]?.strokes;
   ensureImg(i - 1); ensureImg(i); ensureImg(i + 1);
   stripTo(i);
   $('counter').textContent = `${(i + 1).toLocaleString('ar')} / ${TRACKS.length.toLocaleString('ar')}`;
@@ -210,6 +236,17 @@ function show(i, scroll = true) {
 
 // "back" history for the previous button in shuffle mode
 function remember(i) { if (cur >= 0 && i !== cur) backStack.push(cur); }
+
+// one letter's recording: fetched, unscrambled with the session key and decoded (writing.js uses it too)
+async function fetchTrack(i) {
+  ctx ??= new AudioContext();
+  const r = await fetch('audio.php?t=' + i, { headers: { 'X-Player': '1' }, cache: 'no-store' });
+  if (r.status === 403) location.reload();
+  if (!r.ok) throw 0;
+  const a = new Uint8Array(await r.arrayBuffer());
+  for (let j = 0; j < a.length; j++) a[j] ^= KEY[j % KEY.length];
+  return ctx.decodeAudioData(a.buffer);
+}
 
 async function load(i, track = true) {
   if (track) remember(i);
@@ -222,12 +259,7 @@ async function load(i, track = true) {
   $('dur').textContent = '0:00';
   $('status').textContent = 'جارٍ التحميل…';
   try {
-    const r = await fetch('audio.php?t=' + i, { headers: { 'X-Player': '1' }, cache: 'no-store' });
-    if (r.status === 403) return location.reload();
-    if (!r.ok) throw 0;
-    const a = new Uint8Array(await r.arrayBuffer());
-    for (let j = 0; j < a.length; j++) a[j] ^= KEY[j % KEY.length];
-    const decoded = await ctx.decodeAudioData(a.buffer);
+    const decoded = await fetchTrack(i);
     if (id !== loadId) return; // a newer track was picked meanwhile
     buf = decoded;
     $('dur').textContent = fmt(buf.duration);
@@ -241,18 +273,18 @@ async function load(i, track = true) {
 $('play').onclick = () => playing ? pause() : play();
 // --- shuffle / repeat (remembered per browser) ---
 const REPEAT = {
-  off: { next: 'all', label: 'بدون تكرار', d: 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z' },
+  next: { next: 'all', label: 'تشغيل الحروف بالتتابع', d: 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z' },
   all: { next: 'one', label: 'تشغيل الكل بالتكرار', d: 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z' },
-  one: { next: 'off', label: 'تكرار الحرف', d: 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z' },
+  one: { next: 'next', label: 'تكرار الحرف', d: 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z' },
 };
-let shuffle = false, repeat = 'off';
+let shuffle = false, repeat = 'next'; // default: go on to the next letter by itself
 const backStack = []; // letters played before, so "previous" works in shuffle mode
-try { shuffle = localStorage.getItem('shuffle') === '1'; repeat = REPEAT[localStorage.getItem('repeat')] ? localStorage.getItem('repeat') : 'off'; } catch {}
+try { shuffle = localStorage.getItem('shuffle') === '1'; repeat = REPEAT[localStorage.getItem('repeat')] ? localStorage.getItem('repeat') : 'next'; } catch {}
 
 function renderModes() {
   $('shuffle').classList.toggle('on', shuffle);
   $('shuffle').ariaPressed = String(shuffle);
-  $('repeat').classList.toggle('on', repeat !== 'off');
+  $('repeat').classList.toggle('on', repeat !== 'next');
   $('repeat').ariaLabel = $('repeat').title = REPEAT[repeat].label;
   $('repeatIcon').setAttribute('d', REPEAT[repeat].d);
   try { localStorage.setItem('shuffle', shuffle ? '1' : '0'); localStorage.setItem('repeat', repeat); } catch {}
@@ -331,10 +363,14 @@ function stretch(b, r) {
   return out;
 }
 
-(function tick() {
+// the frame loop runs only while playing or dragging; anything else that changes the waveform calls redraw()
+function redraw() { raf ||= requestAnimationFrame(tick); }
+function tick() {
+  raf = 0;
   if (buf) $('cur').textContent = fmt(drag ?? pos());
   draw();
-  requestAnimationFrame(tick);
-})();
+  if (playing || drag !== null) redraw();
+}
+addEventListener('resize', redraw);
 
 show(0, false); // no autoplay: browsers block audio before a click

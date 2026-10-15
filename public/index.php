@@ -86,20 +86,26 @@ if ($logged) {
     $s = db()->prepare('SELECT track FROM progress WHERE user_id = ?');
     $s->execute([$me['id']]);
     $heard = array_flip($s->fetchAll(PDO::FETCH_COLUMN));
+    $s = db()->prepare('SELECT track, stars FROM writing WHERE user_id = ?');
+    $s->execute([$me['id']]);
+    $stars = $s->fetchAll(PDO::FETCH_KEY_PAIR);
+    $stroked = array_flip(db()->query('SELECT track FROM strokes')->fetchAll(PDO::FETCH_COLUMN));
     $list = [];
     foreach (tracks() as $i => $f) {
         $list[] = ['title' => track_title($f), 'glyph' => track_glyph($f), 'img' => track_image($i, 1200),
-            'thumb' => track_image($i, 240), 'done' => isset($heard[basename($f)])];
+            'thumb' => track_image($i, 240), 'done' => isset($heard[basename($f)]),
+            'strokes' => isset($stroked[basename($f)]), 'stars' => (int)($stars[basename($f)] ?? 0)];
     }
 }
 $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
+$banner = image_url('headerontop.jpg', 1200);
 ?>
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>الحروف الناطقة</title>
+<title>حروفي الناطقة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
@@ -107,7 +113,8 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
 <body>
 <?php if (!$logged): ?>
 <main class="card">
-  <h1>الحروف الناطقة</h1>
+  <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة"><?php endif ?>
+  <h1>حروفي الناطقة</h1>
   <div class="tabs">
     <button type="button" data-tab="login" class="<?= $tab === 'login' ? 'on' : '' ?>">تسجيل الدخول</button>
     <button type="button" data-tab="register" class="<?= $tab === 'register' ? 'on' : '' ?>">حساب جديد برمز التفعيل</button>
@@ -147,6 +154,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
 </script>
 <?php else: ?>
 <main class="player-page" oncontextmenu="return false">
+  <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة"><?php endif ?>
   <div class="top">
     <span><?= $h($me['username']) ?><?php if ($me['is_admin']): ?> · <a href="admin.php">لوحة الإدارة</a><?php endif ?></span>
     <form method="post"><input type="hidden" name="action" value="logout"><button>تسجيل الخروج</button></form>
@@ -166,7 +174,8 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
         <button id="repeat"><svg viewBox="0 0 24 24"><path id="repeatIcon"/></svg></button>
         <button id="speed" class="speed" aria-label="سرعة التشغيل" title="سرعة التشغيل"></button>
       </div>
-      <div class="sc-meta"><div class="sc-artist">الحروف الناطقة</div><div class="sc-title" id="title"></div></div>
+      <div class="sc-meta"><div class="sc-artist">حروفي الناطقة</div><div class="sc-title" id="title"></div>
+        <button id="writeBtn" class="write-btn" hidden>✍️ تمرين الكتابة</button></div>
     </div>
     <div class="wave" id="wave" role="slider" aria-label="موضع التشغيل" tabindex="0">
       <canvas id="cv"></canvas>
@@ -175,13 +184,27 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
     <div class="status" id="status"></div>
   </section>
   <div class="letters-head"><h2>الحروف</h2><span id="progress"></span></div>
+  <div class="rewards"><span id="medals" role="img"></span><a id="cert" href="certificate.php" hidden>🏆 شهادتك</a></div>
   <div class="letters" id="list"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="writing" class="writing" aria-labelledby="wTitle">
+    <div class="w-head"><h2 id="wTitle"></h2><button id="wClose" class="w-close" aria-label="إغلاق">✕</button></div>
+    <canvas id="wPad" class="w-pad" aria-label="اكتب الحرف بإصبعك على المسار"></canvas>
+    <p id="wMsg" class="w-msg" role="status"></p>
+    <div class="w-btns">
+      <button id="wWatch" class="btn alt">شاهد مرة أخرى</button>
+      <button id="wRetry" class="btn alt" hidden>أعد المحاولة</button>
+      <button id="wNext" class="btn" hidden>الحرف التالي</button>
+    </div>
+  </dialog>
 </main>
 <script>
 const TRACKS = <?= json_encode($list, JSON_UNESCAPED_UNICODE) ?>;
 const KEY = Uint8Array.from(atob('<?= base64_encode($_SESSION['key']) ?>'), c => c.charCodeAt(0));
 </script>
 <script src="player.js?v=<?= filemtime(__DIR__ . '/player.js') ?>"></script>
+<script src="guide.js?v=<?= filemtime(__DIR__ . '/guide.js') ?>"></script>
+<script src="writing.js?v=<?= filemtime(__DIR__ . '/writing.js') ?>"></script>
 <?php endif ?>
 </body>
 </html>

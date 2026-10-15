@@ -63,11 +63,17 @@ function insert_ignore(): string
 
 const NOW = 'Y-m-d H:i:s'; // gmdate(NOW): current UTC time for DATETIME columns, in both databases
 
-/** Start a session for user $id. The new token logs out any other device of this user. */
+/**
+ * Start a session for user $id. A new token logs out any other device of this user,
+ * except for admins: the owners share the admin account, so an admin keeps the current token.
+ */
 function login_as(int $id): never
 {
     session_regenerate_id(true);
-    $token = bin2hex(random_bytes(16));
+    $s = db()->prepare('SELECT is_admin, token FROM users WHERE id = ?');
+    $s->execute([$id]);
+    $u = $s->fetch();
+    $token = $u['is_admin'] && $u['token'] ? $u['token'] : bin2hex(random_bytes(16));
     db()->prepare('UPDATE users SET token = ?, last_login = ? WHERE id = ?')->execute([$token, gmdate(NOW), $id]);
     $_SESSION = ['uid' => $id, 'token' => $token, 'key' => random_bytes(32)];
     header('Location: ./');

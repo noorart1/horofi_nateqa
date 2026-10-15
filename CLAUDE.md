@@ -33,7 +33,7 @@ Plain PHP 8 + PDO (MySQL/MariaDB on the server, SQLite locally), no framework, n
 - Tables: `users`, `codes`, `fails`, `progress` (listened letters), `strokes` (track → JSON `[[[x,y],…],…]`, 0..1 of the guide square, writing order: body first, each dot its own one-point stroke), `writing` (best stars per user and letter). `progress`, `strokes` and `writing` key letters by the mp3 basename.
 - Deleting a user must also delete their `progress` and `writing` rows and free their code.
 - Tracks are the sorted `data/media/*.mp3`; the number prefix (`02 Ba …`) gives the Arabic name/letter in `lib.php`.
-- One active session per account: `login_as()` writes a new `users.token`; `current_user()` rejects a session whose token doesn't match. Every authenticated endpoint uses `current_user()`.
+- One active session per account: `login_as()` writes a new `users.token`; `current_user()` rejects a session whose token doesn't match. Every authenticated endpoint uses `current_user()`. Exception: admins keep their token on login, so several people can use the admin account at once (the admin panel's "logout"/password reset still clears it).
 - Failed login/register/reset attempts are rate-limited per IP (`MAX_FAILS`/hour).
 - Schema changes go in `db()` in `lib.php` (`CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ADD COLUMN` when the column is missing).
 - All SQL must run on both MySQL and SQLite: `insert_ignore()` instead of `INSERT OR IGNORE`, `REPLACE INTO`, `gmdate(NOW)` instead of `datetime('now')`, no `ON CONFLICT`/`ON DUPLICATE KEY`, VARCHAR(191) for indexed text.

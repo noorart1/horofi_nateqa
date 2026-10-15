@@ -1,0 +1,5 @@
+# Always HTTPS: passwords and the session cookie must not travel in clear text.
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]

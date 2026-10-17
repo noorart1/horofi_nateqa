@@ -1,6 +1,20 @@
 // Celebrations, drawn with anime.js (public/vendor): confetti bursts, the star that flies to a learned letter, medal pops.
 // Every function resolves at once under "reduce motion", and nothing here blocks a click (the layer ignores the pointer).
-const { animate, createTimeline, random, stagger, cleanInlineStyles } = anime;
+// anime.js (about 118 KB) is not on the page's first paint: it loads at idle time once the page is drawn, or at once when
+// a moment needs it earlier, and that moment then waits for it (a press ring or a beat note is just skipped meanwhile).
+const ANIME_SRC = new URL('vendor/anime-4.5.0.umd.min.js', document.currentScript.src).href;
+let A = null, animeLoading = null;
+function loadAnime() {
+  return animeLoading ??= new Promise((res, rej) => {
+    const s = Object.assign(document.createElement('script'), { src: ANIME_SRC });
+    s.onload = () => res(A = window.anime);
+    s.onerror = () => { animeLoading = null; rej(); }; // tried again next time
+    document.head.append(s);
+  });
+}
+addEventListener('load', () => (window.requestIdleCallback || setTimeout)(() => loadAnime().catch(() => {}), { timeout: 4000 }));
+const animate = (...a) => A.animate(...a), createTimeline = (...a) => A.createTimeline(...a), random = (...a) => A.random(...a),
+  stagger = (...a) => A.stagger(...a), cleanInlineStyles = (...a) => A.cleanInlineStyles(...a);
 // animations on page elements end with cleanInlineStyles, so the CSS hover/press transforms work again
 const clean = { onComplete: cleanInlineStyles };
 
@@ -289,3 +303,12 @@ function ambient(on) {
     animate(sky.children, { opacity: 0, duration: 700, onComplete: () => sky.replaceChildren() });
   }
 }
+
+// The moments other files call: at once when anime.js is here, else once it has loaded (a promise stays a promise).
+// A press ring or a beat note that comes before it is skipped: shown late, it would be in the wrong place or off the beat.
+const later = fn => (...a) => A ? fn(...a) : loadAnime().then(() => fn(...a), () => {});
+const orSkip = fn => (...a) => { if (A) return fn(...a); loadAnime().catch(() => {}); };
+burst = later(burst); rain = later(rain); twinkle = later(twinkle); celebrateLetter = later(celebrateLetter);
+celebrateWriting = later(celebrateWriting); enterGrid = later(enterGrid); swapBadge = later(swapBadge);
+strokeSparkle = later(strokeSparkle); openPad = later(openPad); ambient = later(ambient);
+ripple = orSkip(ripple); singNote = orSkip(singNote);

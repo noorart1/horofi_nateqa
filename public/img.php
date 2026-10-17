@@ -1,7 +1,7 @@
 <?php
 // Serves a resized WebP copy of an image in public/img, generated once and cached in data/cache.
+const NO_SESSION = true; // pictures are public: no session file, so many load at once without waiting on its lock
 require __DIR__ . '/../lib.php';
-session_write_close();
 
 $name = basename($_GET['f'] ?? '');
 $width = (int)($_GET['w'] ?? 0);

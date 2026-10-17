@@ -18,7 +18,8 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>شهادة حروفي الناطقة</title>
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@700;800&family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts/vazirmatn.css?v=<?= filemtime(__DIR__ . '/fonts/vazirmatn.css') ?>">
+<link rel="stylesheet" href="fonts/rubik.css?v=<?= filemtime(__DIR__ . '/fonts/rubik.css') ?>">
 <style>
   body { margin:0; padding:24px 16px; background:#e6f5fc; color:#123a5c; font-family:Vazirmatn, Tahoma, sans-serif; text-align:center; }
   .cert { max-width:720px; margin:0 auto; background:#fff; border:12px solid #ffcb05; outline:3px dashed #0070b2; outline-offset:-22px; border-radius:32px;
@@ -59,7 +60,6 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
   </div>
   <div class="btns"><button onclick="print()">طباعة</button><a href="./">العودة</a></div>
   <script>document.getElementById('date').textContent = new Date().toLocaleDateString('ar', { year: 'numeric', month: 'long', day: 'numeric' });</script>
-  <script src="vendor/anime-4.5.0.umd.min.js"></script>
   <script src="party.js?v=<?= filemtime(__DIR__ . '/party.js') ?>"></script>
   <script>rain(140); burst(innerWidth / 2, 160, 50, 1.4);</script>
 <?php endif ?>

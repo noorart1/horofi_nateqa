@@ -403,11 +403,18 @@ function hsv(r, gg, b) {
   if (d) h = mx === r ? ((gg - b) / d + 6) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4;
   return [h / 6, mx ? d / mx : 0, mx / 255];
 }
-function maskFrom(target, test, blur = 1) {
+// the frame picture's pixels and their hue, saturation and value, worked out once for all the masks of a build
+function framePixels() {
   const t = mk(); t.width = W; t.height = H;
   const tg = t.getContext('2d'); tg.drawImage(img, 0, 0);
-  const d = tg.getImageData(0, 0, W, H), a = d.data;
-  for (let i = 0; i < W * H; i++) { const [h, s, v] = hsv(a[i * 4], a[i * 4 + 1], a[i * 4 + 2]); a[i * 4 + 3] = test(i % W, (i / W) | 0, h, s, v); }
+  const rgba = tg.getImageData(0, 0, W, H).data, P = new Float64Array(W * H * 3);
+  for (let i = 0; i < W * H; i++) { const [h, s, v] = hsv(rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2]); P[i * 3] = h; P[i * 3 + 1] = s; P[i * 3 + 2] = v; }
+  return { rgba, P };
+}
+function maskFrom(target, test, blur = 1, px = framePixels()) {
+  const t = mk(); t.width = W; t.height = H;
+  const tg = t.getContext('2d'), d = new ImageData(new Uint8ClampedArray(px.rgba), W, H), a = d.data, P = px.P;
+  for (let i = 0; i < W * H; i++) a[i * 4 + 3] = test(i % W, (i / W) | 0, P[i * 3], P[i * 3 + 1], P[i * 3 + 2]);
   tg.putImageData(d, 0, 0);
   const m = target.getContext('2d'); m.clearRect(0, 0, W, H); m.filter = `blur(${blur}px)`; m.drawImage(t, 0, 0); m.filter = 'none';
 }
@@ -418,19 +425,22 @@ function jawOf(S) {
   return c;
 }
 function buildJaw() { jawCache.clear(); }
+// On the site the scene never changes after it loads, so only the masks it uses are built (the sky one serves the clouds
+// and every sky effect); the editor builds them all, as any setting may change.
 function buildMasks() {
+  const px = framePixels(), need = used => !PLAYER || used;
   const { y0: w0, y1: w1 } = D.fx.waves; // water for the waves effect: light blue or turquoise inside its band
-  maskFrom(wvM, (x, y, h, s, v) => y >= w0 && y <= w1 && h > 0.45 && h < 0.58 && s > 0.2 && v > 0.55 ? 255 : 0, 1.5);
+  if (need(D.fx.waves.on)) maskFrom(wvM, (x, y, h, s, v) => y >= w0 && y <= w1 && h > 0.45 && h < 0.58 && s > 0.2 && v > 0.55 ? 255 : 0, 1.5, px);
   const [y0, y1] = D.sky;
-  maskFrom(skyM, (x, y, h, s, v) => y > y0 && y < y1 && h > 0.45 && h < 0.56 && s > 0.12 && v > 0.7 ? 255 : 0);
+  maskFrom(skyM, (x, y, h, s, v) => y > y0 && y < y1 && h > 0.45 && h < 0.56 && s > 0.12 && v > 0.7 ? 255 : 0, 1, px);
   const { y0: a, y1: b, exclude } = D.haze, peak = a + (b - a) * 0.35;
-  maskFrom(hzM, (x, y, h, s, v) => {
+  if (need(D.world === 'desert')) maskFrom(hzM, (x, y, h, s, v) => {
     if (y < a || y > b || exclude.some(([ex, ey, ew, eh]) => x >= ex && x < ex + ew && y >= ey && y < ey + eh)) return 0;
     const sand = h > 0.105 && h < 0.17 && s < 0.6 && v > 0.85, skyish = h > 0.45 && h < 0.56 && v > 0.7;
     const f = y < peak ? (y - a) / (peak - a) : 1 - (y - peak) / (b - peak);
     return sand || skyish ? Math.round(255 * Math.sin(f * Math.PI / 2)) : 0;
-  }, 1.5);
-  maskFrom(spM, (x, y, h, s, v) => h > 0.5 && h < 0.62 && s > 0.5 && v < 0.68 ? 255 : 0);
+  }, 1.5, px);
+  if (need(D.world === 'space')) maskFrom(spM, (x, y, h, s, v) => h > 0.5 && h < 0.62 && s > 0.5 && v < 0.68 ? 255 : 0, 1, px);
 }
 function rebuild() { buildJaw(); buildMasks(); }
 
@@ -1556,10 +1566,30 @@ function fftMag(re) { // in-place radix-2 FFT; returns |X|² for the lower half
   }
   const out = new Float32Array(n / 2); for (let i = 0; i < n / 2; i++) out[i] = re[i] * re[i] + im[i] * im[i]; return out;
 }
+
+// The heavy loops of the analysis run in a worker when there is one, so the page's buttons and swipes stay quick;
+// otherwise right here. The worker is built from these very functions, so there is one copy of the code.
+let worker = null, workerJobs = 0;
+const workerWaits = new Map();
+function offThread(name, x, SR) {
+  const run = () => ({ voicingOf, shapesOf })[name](x, SR, FPS);
+  if (worker === null) try {
+    worker = new Worker(URL.createObjectURL(new Blob([`${fftMag}\n${voicingOf}\n${shapesOf}\nonmessage = e => { const { id, name, x, SR, FPS } = e.data; postMessage({ id, out: ({ voicingOf, shapesOf })[name](x, SR, FPS) }); };`], { type: 'text/javascript' })));
+    worker.onmessage = e => { workerWaits.get(e.data.id)?.(e.data.out); workerWaits.delete(e.data.id); };
+    worker.onerror = () => { worker = false; workerWaits.forEach(r => r(null)); workerWaits.clear(); };
+  } catch { worker = false; }
+  if (!worker) return run();
+  const id = ++workerJobs, copy = x.slice(); // a copy: the rendered buffer's own memory is not the page's to give away
+  return new Promise(r => { workerWaits.set(id, r); worker.postMessage({ id, name, x: copy, SR, FPS }, [copy.buffer]); }).then(out => out ?? run());
+}
 async function analyzeShapes(b) { // per frame: how much sound in the bands where vowels differ
   const SR = 11025, N = 512, off = new OfflineAudioContext(1, Math.ceil(b.duration * SR), SR), s = off.createBufferSource(); s.buffer = b;
   const hp = off.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200; s.connect(hp); hp.connect(off.destination); s.start();
-  const x = (await off.startRendering()).getChannelData(0), hop = SR / FPS, bin = SR / N, out = [];
+  return offThread('shapesOf', (await off.startRendering()).getChannelData(0), SR);
+}
+// the FFT loop on its own (it may run in a worker): F1, F2 and hiss per frame
+function shapesOf(x, SR, FPS) {
+  const N = 512, hop = SR / FPS, bin = SR / N, out = [];
   const win = Float32Array.from({ length: N }, (_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N));
   const band = (P, a, z) => { let e = 0; for (let i = Math.round(a / bin); i <= Math.round(z / bin); i++) e += P[i]; return e; };
   for (let f = 0; f * hop + N < x.length; f++) {
@@ -2581,7 +2611,11 @@ async function analyzeVoicing(b) {
   const hp = off.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 250;
   const lp = off.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000;
   s.connect(hp); hp.connect(lp); lp.connect(off.destination); s.start();
-  const x = (await off.startRendering()).getChannelData(0), N = 256, hop = SR / FPS, out = [];
+  return offThread('voicingOf', (await off.startRendering()).getChannelData(0), SR);
+}
+// the voicing loop on its own (it may run in a worker): one value per frame, smoothed
+function voicingOf(x, SR, FPS) {
+  const N = 256, hop = SR / FPS, out = [];
   for (let f = 0; f * hop + N + 140 < x.length; f++) {
     const o = Math.round(f * hop); let best = 0, e0 = 0;
     for (let i = 0; i < N; i++) e0 += x[o + i] * x[o + i];
@@ -2595,7 +2629,28 @@ async function analyzeVoicing(b) {
   }
   return out.map((v, i) => { let s2 = 0, n = 0; for (let k = -3; k <= 3; k++) if (out[i + k] != null) { s2 += out[i + k]; n++; } return s2 / n; }); // smooth over ±50 ms
 }
-async function useBuffer(b) { stop(); buf = b; gateCache.clear(); visCache.clear(); widthCache = null; env.v = await analyze(b, true); env.all = await analyze(b, false); env.voiced = await analyzeVoicing(b); env.shape = await analyzeShapes(b); gateCache.clear(); visCache.clear(); drawEnv(); }
+// The analysis of a song never changes: on the site it is kept per device in IndexedDB under the page's key
+// (track and file size) and this version, so each song is worked out once. Shapes are needed only by viseme mouths.
+const ANALYSIS_VERSION = 1;
+function analysisStore(mode, fn) {
+  return new Promise(res => { try {
+    const rq = indexedDB.open('horofi-anim', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('analysis');
+    rq.onsuccess = () => { try { const tx = rq.result.transaction('analysis', mode), r = fn(tx.objectStore('analysis')); tx.oncomplete = () => { rq.result.close(); res(r?.result); }; tx.onerror = tx.onabort = () => { rq.result.close(); res(null); }; } catch { res(null); } };
+    rq.onerror = () => res(null);
+  } catch { res(null); } });
+}
+async function useBuffer(b, key) {
+  stop(); buf = b; gateCache.clear(); visCache.clear(); widthCache = null;
+  const needShape = !PLAYER || D.singers.some(S => S.method === 'visemes'), id = key && `${key}|v${ANALYSIS_VERSION}`;
+  const kept = id && await analysisStore('readonly', s => s.get(id));
+  if (kept && (kept.shape || !needShape)) Object.assign(env, kept);
+  else {
+    env.v = await analyze(b, true); env.all = await analyze(b, false); env.voiced = await analyzeVoicing(b); env.shape = needShape ? await analyzeShapes(b) : null;
+    if (id) analysisStore('readwrite', s => s.put({ v: env.v, all: env.all, voiced: env.voiced, shape: env.shape }, id));
+  }
+  gateCache.clear(); visCache.clear(); drawEnv();
+}
 const inRanges = (t, rs) => rs.some(([a, b]) => t >= a && t <= b);
 // How open the mouth should be at frame i: only the voice, never the music alone.
 function mouthAt(i, S = D.singer) {
@@ -2781,7 +2836,15 @@ $('manual').oninput = () => $('manualOut').textContent = fa($('manual').value) +
 let previewVis = null, loudK = 0;
 const lvA = [], visA = [], lastA = [], quietPick = [], wasIdle = [];
 // 'Random' when quiet: each quiet moment of a singer gets one of the MOODS, picked when it falls quiet
+// The site's player sleeps when its picture is out of sight ({ sleep: true } from the page); a weak phone draws the
+// quiet scene at 30 frames a second (the song itself always gets every frame).
+let asleep = false, lastFrame = 0;
+const IDLE_FPS = PLAYER && ((navigator.deviceMemory || 8) < 4 || (navigator.hardwareConcurrency || 8) <= 4) ? 30 : 60;
+function wake() { asleep = false; if (!looping && D?.singers) { looping = true; requestAnimationFrame(tick); } } // not before the scene is loaded
 function tick(now) {
+  if (asleep) { looping = false; return; }
+  if (IDLE_FPS < 60 && !playing && now - lastFrame < 1000 / IDLE_FPS - 4) { requestAnimationFrame(tick); return; }
+  lastFrame = now;
   const on = playing && buf, i = on ? Math.min(Math.floor((actx.currentTime - t0) * FPS), env.v.length - 1) : -1;
   if (on) { energy += ((env.all[i] || 0) - energy) * 0.08; drawEnv((actx.currentTime - t0) / buf.duration); } else energy *= 0.95;
   const n = D.singers.length; lvA.length = visA.length = lastA.length = n;
@@ -2905,24 +2968,28 @@ $('bImport').onchange = async e => {
 };
 
 // --- the website build ---
-// Opened as player.html?data=…&img=…[&audio=…] (links on the same site). The parent page may send 'play', 'stop', { seek, play },
-// { camera } and { audio } with postMessage, and hears 'anim:shown', 'anim:ready', 'anim:play' and 'anim:ended' back.
+// Opened as player.html#data=…&img=…[&audio=…] (links on the same site; after # so every letter shares one cached copy, ? works too).
+// The parent page may send 'play', 'stop', { seek, play }, { camera }, { audio }, { sleep } and { drop } with postMessage, or call
+// animSong(buffer, key), and hears 'anim:shown', 'anim:ready', 'anim:play' and 'anim:ended' back.
 function bootPlayer() {
   document.body.classList.add('player'); $('guides').checked = false;
   document.documentElement.dataset.theme = 'light'; // a book page is light: a dark scheme would paint a dark backdrop around the frame
-  const q = new URLSearchParams(location.search), same = u => { if (!u) return null; const x = new URL(u, location.href); return x.origin === location.origin ? x.href : null; };
+  const q = new URLSearchParams(location.hash.length > 1 ? location.hash.slice(1) : location.search), same = u => { if (!u) return null; const x = new URL(u, location.href); return x.origin === location.origin ? x.href : null; };
   const dataU = same(q.get('data')), imgU = same(q.get('img')), audU = same(q.get('audio')), tell = m => { try { parent !== window && parent.postMessage(m, location.origin); } catch {} };
   const fail = msg => { document.body.classList.remove('player'); document.body.innerHTML = '<p style="font:16px sans-serif;padding:20px">' + msg + '</p>'; };
   if (!dataU || !imgU) return fail('Missing the data or the picture link.');
   // the song: from the audio link, or sent later as { audio: link } by the page, so the picture need not wait for it.
   // 'anim:shown' once the picture is drawn, 'anim:ready' once the song can play too.
-  let shown = false, songU = audU, songSent = !!audU;
+  // Or the page hands over its own decoded copy with animSong(buffer, key): one download and one decode for both.
+  let shown = false, songU = audU, songSent = !!audU, given = null;
   const song = async () => {
-    if (!shown || !songSent) return;
-    songSent = false;
-    if (songU) try { const ab = await (await fetch(songU)).arrayBuffer(); await useBuffer(await new OfflineAudioContext(1, 1, 44100).decodeAudioData(ab)); } catch {}
+    if (!shown || !(songSent || given)) return;
+    const [b, key] = given || [];
+    songSent = false; given = null;
+    try { await useBuffer(b || await new OfflineAudioContext(1, 1, 44100).decodeAudioData(await (await fetch(songU)).arrayBuffer()), key); } catch {}
     tell('anim:ready');
   };
+  window.animSong = (b, key) => { given = [b, key]; song(); };
   fetch(dataU).then(r => { if (!r.ok) throw 0; return r.json(); }).then(j => {
     const b = readBundle(j);
     loadImage(imgU, b.letter || 'page', null, () => {
@@ -2939,7 +3006,11 @@ function bootPlayer() {
     if (e.data?.seek >= 0) { stop(); resumeAt = Math.min(+e.data.seek, (buf?.duration || 0)); if (e.data.play) go(); }
     // { camera: true|false } from the page's camera toggle: the viewer chooses whether the camera moves to the singers
     if (typeof e.data?.camera === 'boolean') D.camera.on = e.data.camera;
-    if (typeof e.data?.audio === 'string') { songU = same(e.data.audio); songSent = true; song(); } });
+    if (typeof e.data?.audio === 'string') { songU = same(e.data.audio); songSent = !!songU; song(); }
+    // { sleep: true|false }: stop drawing while the picture is out of sight, and go on when it is back
+    if (typeof e.data?.sleep === 'boolean') { if (e.data.sleep) asleep = true; else wake(); }
+    // { drop: true }: no longer the current letter; let go of the song (the page hands it over again)
+    if (e.data?.drop) { stop(); buf = null; } });
 }
 if (PLAYER) bootPlayer();
 else { const pg = PAGES['ف']; loadImage(pg.src, 'ف', pg.d); loadPageAudio(pg); } // open on the page with the real song

@@ -111,15 +111,17 @@ $banner = image_url('headerontop.jpg', 1200);
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>حروفي الناطقة</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@700;800&family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/vazirmatn-arabic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts/vazirmatn.css?v=<?= filemtime(__DIR__ . '/fonts/vazirmatn.css') ?>">
+<link rel="stylesheet" href="fonts/rubik.css?v=<?= filemtime(__DIR__ . '/fonts/rubik.css') ?>">
 <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
-<?php if ($animPlayer): ?><link rel="prefetch" href="<?= $h($animPlayer) ?>"><?php endif /* the living-picture player, cached before the first one is needed */ ?>
+<?php if (!empty($list[0]['img'])): ?><link rel="preload" as="image" href="<?= $h($list[0]['img']) ?>" fetchpriority="high"><?php endif /* the first cover: the page's largest picture, found before player.js runs */ ?>
+<?php if ($animPlayer && ($_SERVER['HTTP_SAVE_DATA'] ?? '') !== 'on'): ?><link rel="prefetch" href="<?= $h($animPlayer) ?>"><?php endif /* the living-picture player, cached before the first one is needed */ ?>
 </head>
 <body>
 <?php if (!$logged): ?>
 <main class="card">
-  <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة"><?php endif ?>
+  <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450" fetchpriority="high"><?php endif ?>
   <h1>حروفي الناطقة</h1>
   <div class="tabs">
     <button type="button" data-tab="login" class="<?= $tab === 'login' ? 'on' : '' ?>">تسجيل الدخول</button>
@@ -160,7 +162,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
 </script>
 <?php else: ?>
 <main class="player-page" oncontextmenu="return false">
-  <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة"><?php endif ?>
+  <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450"><?php endif ?>
   <div class="top">
     <span><?= $h($me['username']) ?><?php if ($me['is_admin']): ?> · <a href="admin.php">لوحة الإدارة</a><?php endif ?></span>
     <form method="post"><input type="hidden" name="action" value="logout"><button>تسجيل الخروج</button></form>
@@ -214,11 +216,11 @@ const TRACKS = <?= json_encode($list, JSON_UNESCAPED_UNICODE) ?>;
 const KEY = Uint8Array.from(atob('<?= base64_encode($_SESSION['key']) ?>'), c => c.charCodeAt(0));
 const ANIM = <?= json_encode($animPlayer) ?>;
 </script>
-<script src="vendor/anime-4.5.0.umd.min.js"></script>
-<script src="party.js?v=<?= filemtime(__DIR__ . '/party.js') ?>"></script>
-<script src="player.js?v=<?= filemtime(__DIR__ . '/player.js') ?>"></script>
-<script src="guide.js?v=<?= filemtime(__DIR__ . '/guide.js') ?>"></script>
-<script src="writing.js?v=<?= filemtime(__DIR__ . '/writing.js') ?>"></script>
+<!-- deferred, in this order, after the page is parsed; TRACKS, KEY and ANIM above are already set (party.js loads anime.js itself) -->
+<script defer src="party.js?v=<?= filemtime(__DIR__ . '/party.js') ?>"></script>
+<script defer src="player.js?v=<?= filemtime(__DIR__ . '/player.js') ?>"></script>
+<script defer src="guide.js?v=<?= filemtime(__DIR__ . '/guide.js') ?>"></script>
+<script defer src="writing.js?v=<?= filemtime(__DIR__ . '/writing.js') ?>"></script>
 <?php endif ?>
 </body>
 </html>

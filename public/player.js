@@ -134,6 +134,7 @@ function play() {
   if (live()) return anim.contentWindow.postMessage({ seek: offset, play: true }, location.origin);
   if (anim?.dataset.i === String(cur) && !anim.late) { // its picture is still loading: start the song there once it is up
     const a = anim, id = loadId;
+    a.wanted = true; giveSong(a); // the child wants it now: no waiting for the letter to settle
     $('status').textContent = 'جارٍ التحميل…';
     Promise.race([a.ready, new Promise(r => setTimeout(r, 8000))]).then(() => {
       a.late = !live(); // it never came up: the page plays the song itself
@@ -202,6 +203,7 @@ TRACKS.forEach(t => {
   $('strip').append(img);
 });
 const imgs = [...$('strip').children];
+imgs[0].fetchPriority = 'high'; // the first cover is the page's largest picture (its LCP)
 
 TRACKS.forEach((t, i) => {
   const b = document.createElement('button');
@@ -287,9 +289,12 @@ function show(i, scroll = true) {
 // "back" history for the previous button in shuffle mode
 function remember(i) { if (cur >= 0 && i !== cur) backStack.push(cur); }
 
-// one letter's mp3, fetched and unscrambled with the session key; the last few are kept, shared by the player
-// and the living pictures (the current letter's and the neighbours' loading ahead)
-const bytes = new Map();
+// A phone that asks to save data, is on 2G or has under 4 GB of memory loads only what is on screen
+const LEAN = !!navigator.connection?.saveData || /2g$/.test(navigator.connection?.effectiveType || '') || (navigator.deviceMemory || 8) < 4;
+
+// one letter's mp3, fetched and unscrambled with the session key; the last few are kept, so going back is instant
+// (two on a phone with little memory: each is about 1.5 MB)
+const bytes = new Map(), BYTES_KEPT = (navigator.deviceMemory || 8) < 4 ? 2 : 4;
 function trackBytes(i) {
   if (!bytes.has(i)) {
     const p = (async () => {
@@ -302,60 +307,80 @@ function trackBytes(i) {
     })();
     bytes.set(i, p);
     p.catch(() => { if (bytes.get(i) === p) bytes.delete(i); }); // a failed fetch is tried again next time
-    if (bytes.size > 4) bytes.delete(bytes.keys().next().value);
+    if (bytes.size > BYTES_KEPT) bytes.delete(bytes.keys().next().value);
   }
   return bytes.get(i);
 }
-// ...and decoded (writing.js uses it too); a copy, because decoding takes over the bytes
-async function fetchTrack(i) {
-  ctx ??= new AudioContext();
-  return ctx.decodeAudioData((await trackBytes(i)).slice().buffer);
+// ...and decoded (writing.js uses it too). The latest decode is shared: the player, the waveform and the living
+// picture all use this one AudioBuffer (a decoded song is about 15 MB). A copy goes in: decoding takes over the bytes.
+let decoded = null;
+function fetchTrack(i) {
+  if (decoded?.i !== i) {
+    ctx ??= new AudioContext();
+    const p = trackBytes(i).then(a => ctx.decodeAudioData(a.slice().buffer));
+    decoded = { i, p };
+    p.catch(() => { if (decoded?.p === p) decoded = null; });
+  }
+  return decoded.p;
 }
 
 // --- living picture: the letter's animation (anim/player.html, made in the owner's editor) over its cover ---
-// The song goes in as a blob: URL, so the mp3 never gets a plain address. One player: the page's buttons and waveform
-// drive the picture ({seek, play} messages), and the page keeps time with its own clock (waveform, minutes, the star at the end).
-// The neighbours' pictures load ahead out of sight (display:none, so they don't draw), so a swipe finds them ready.
+// One player: the page's buttons and waveform drive the picture ({seek, play} messages), and the page keeps time with its
+// own clock (waveform, minutes, the star at the end). Only the current letter's picture gets the song, handed over as the
+// page's own decoded copy (animSong); the neighbours' pictures load ahead with just their picture and data, asleep and
+// out of sight, so a swipe finds them drawn. A picture also sleeps while the cover is scrolled out of view.
 const frames = new Map(); // letter → its iframe: the current letter's and its neighbours'
-let anim = null; // the current letter's iframe, if it has an animation
+let anim = null, coverSeen = true; // the current letter's iframe, if it has an animation
 const hasAnim = i => !!(ANIM && TRACKS[i]?.anim);
+const tell = (f, m) => f?.contentWindow?.postMessage(m, location.origin);
 function animFrame(i) {
   if (frames.has(i)) return frames.get(i);
   const f = Object.assign(document.createElement('iframe'), { className: 'anim-frame', title: `الصورة الحية لحرف ${TRACKS[i].title}` });
   f.allow = 'autoplay';
   f.dataset.i = i;
-  f.dataset.audio = '';
   f.ready = new Promise(r => f.isReady = r);
-  f.shownP = new Promise(r => f.isShown = r);
   frames.set(i, f);
-  // the picture loads first; the song (about 1.5 MB, so it would slow the picture down) only once the picture is drawn
-  f.song = f.shownP.then(() => trackBytes(i)).then(a => {
-    const url = URL.createObjectURL(new Blob([a], { type: 'audio/mpeg' }));
-    if (frames.get(i) === f) f.dataset.audio = url; else URL.revokeObjectURL(url); // dropped meanwhile
-    return f.dataset.audio;
-  }, () => '');
   const abs = u => encodeURIComponent(new URL(u, location.href).href); // the player resolves links against its own folder
-  f.src = `${ANIM}&data=${abs(TRACKS[i].anim)}&img=${abs(TRACKS[i].img)}`;
+  f.src = `${ANIM}#data=${abs(TRACKS[i].anim)}&img=${abs(TRACKS[i].img)}`; // after #: one cached player for every letter
   $('cover').insertBefore(f, $('counter')); // fades in over the still picture once drawn; if it fails, the picture stays
   return f;
 }
+// the current picture gets the song once it is drawn: the page's decoded copy, and a key for its kept analysis. It waits
+// until the letter has stayed a moment (SETTLE ms), so swiping past a letter does not fetch its 1.5 MB, unless play is pressed.
+const SETTLE = 800;
+function giveSong(f) {
+  if (f.gotSong || f !== anim || !f.classList.contains('shown')) return;
+  const wait = f.wanted ? 0 : SETTLE - (performance.now() - f.curSince);
+  if (wait > 0) { clearTimeout(f.settle); f.settle = setTimeout(() => giveSong(f), wait); return; }
+  f.gotSong = true;
+  const i = +f.dataset.i;
+  Promise.all([fetchTrack(i), trackBytes(i)]).then(([b, a]) => {
+    if (cur === i && !buf) { buf = b; $('dur').textContent = fmt(b.duration); redraw(); }
+    if (anim === f && f.gotSong) f.contentWindow?.animSong?.(b, `${TRACKS[i].anim}|${a.length}`);
+  }, () => { f.gotSong = false; });
+}
 function showAnim(i) {
-  const keep = [i, i - 1, i + 1].filter(hasAnim);
-  for (const [j, f] of frames) if (!keep.includes(j)) { URL.revokeObjectURL(f.dataset.audio); f.remove(); frames.delete(j); }
-  anim?.classList.remove('cur');
+  const keep = (LEAN ? [i] : [i, i - 1, i + 1]).filter(hasAnim);
+  for (const [j, f] of frames) if (!keep.includes(j)) { f.src = 'about:blank'; f.remove(); frames.delete(j); } // blank first: its memory goes at once
+  if (anim && anim.dataset.i !== String(i)) { // no longer the current letter: it lets go of its song and sleeps
+    anim.classList.remove('cur', 'ready');
+    anim.gotSong = false;
+    anim.ready = new Promise(r => anim.isReady = r);
+    tell(anim, { drop: true }); tell(anim, { sleep: true });
+  }
   anim = hasAnim(i) ? animFrame(i) : null; // the current one first, so it loads first
-  anim?.classList.add('cur');
+  if (anim && !anim.classList.contains('cur')) { anim.classList.add('cur'); anim.curSince = performance.now(); anim.wanted = false; tell(anim, { sleep: !coverSeen }); giveSong(anim); }
   keep.forEach(animFrame);
-  const f = anim;
-  if (f && !buf && cur === i) f.shownP.then(() => fetchTrack(i)).then(b => { if (anim === f && !buf) { buf = b; $('dur').textContent = fmt(b.duration); redraw(); } }, () => {});
 }
 // the current letter's living picture is up and has its song: it plays the letter
-const live = () => !!(anim?.classList.contains('ready') && anim.dataset.audio && anim.dataset.i === String(cur));
-function hushAnim() { anim?.contentWindow?.postMessage('stop', location.origin); }
+const live = () => !!(anim?.classList.contains('ready') && anim.dataset.i === String(cur));
+function hushAnim() { tell(anim, 'stop'); }
+// the picture stops drawing while the cover is out of view (a hidden tab stops it by itself)
+new IntersectionObserver(([e]) => { coverSeen = e.isIntersecting; tell(anim, { sleep: !coverSeen }); }).observe($('cover'));
 // the camera moving between the singers is the viewer's choice (off unless turned on; remembered per browser)
 let camera = false;
 try { camera = localStorage.getItem('camera') === '1'; } catch {}
-const tellCamera = (f = anim) => f?.contentWindow?.postMessage({ camera }, location.origin);
+const tellCamera = (f = anim) => tell(f, { camera });
 function renderCamera() {
   $('camera').classList.toggle('on', camera);
   $('camera').ariaPressed = String(camera);
@@ -370,8 +395,8 @@ renderCamera();
 addEventListener('message', e => {
   const f = e.origin === location.origin && [...frames.values()].find(x => x.contentWindow === e.source);
   if (!f) return;
-  if (e.data === 'anim:shown') { f.classList.add('shown'); f.isShown(); tellCamera(f); f.song.then(url => f.contentWindow?.postMessage({ audio: url }, location.origin)); }
-  if (e.data === 'anim:ready') { f.classList.add('ready'); f.isReady(); }
+  if (e.data === 'anim:shown') { f.classList.add('shown'); tellCamera(f); if (f === anim) giveSong(f); else tell(f, { sleep: true }); }
+  if (e.data === 'anim:ready' && f.gotSong) { f.classList.add('ready'); f.isReady(); }
   if (f !== anim) return; // a neighbour loading ahead
   if (e.data === 'anim:play') { // from its own ▶ or from ours: the page follows
     stopSrc();

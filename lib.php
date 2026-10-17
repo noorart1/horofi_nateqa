@@ -5,16 +5,23 @@ const ROOT = __DIR__;
 const MAX_FAILS = 10; // failed login/register attempts per IP per hour
 
 if (PHP_SAPI !== 'cli') {
-    session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS'])]);
-    session_start();
     // no page of the site may be framed (clickjacking)
     header('X-Frame-Options: DENY');
     header("Content-Security-Policy: frame-ancestors 'none'");
+    // a script that never needs the session (img.php) defines NO_SESSION first: no session file, no lock between requests
+    if (!defined('NO_SESSION')) {
+        session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS'])]);
+        session_start();
+    }
 }
+
+/** Raise by one with every schema change in migrate() (a table or a column): only then do the migrations run again. */
+const SCHEMA_VERSION = 1;
 
 /**
  * MySQL when data/config.php exists (the server), else SQLite in data/app.db (local).
  * data/config.php: <?php return ['dsn' => 'mysql:host=localhost;dbname=…;charset=utf8mb4', 'user' => '…', 'pass' => '…'];
+ * A request reads the schema version once; the migrations run only when it is behind SCHEMA_VERSION.
  */
 function db(): PDO
 {
@@ -25,31 +32,46 @@ function db(): PDO
         if ($cfg) {
             $db = new PDO($cfg['dsn'], $cfg['user'], $cfg['pass'], $opts);
             $db->exec("SET time_zone = '+00:00'"); // timestamps in UTC, like SQLite
-            [$id, $nocase, $table] = ['INT AUTO_INCREMENT PRIMARY KEY', '', ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'];
         } else {
+            if (!is_dir(ROOT . '/data')) mkdir(ROOT . '/data', 0775, true);
             $db = new PDO('sqlite:' . ROOT . '/data/app.db', null, null, $opts);
-            $db->exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
-            [$id, $nocase, $table] = ['INTEGER PRIMARY KEY', ' COLLATE NOCASE', '']; // MySQL's default collation already ignores case
+            $db->exec('PRAGMA busy_timeout=5000;');
         }
-        // types valid in both databases; keys are VARCHAR(191) so MySQL can index them in utf8mb4
-        foreach ([
-            "users(id $id, username VARCHAR(191) NOT NULL UNIQUE$nocase, pass VARCHAR(255) NOT NULL, created DATETIME DEFAULT CURRENT_TIMESTAMP)",
-            'codes(code VARCHAR(191) PRIMARY KEY, user_id INT UNIQUE)',
-            'fails(ip VARCHAR(45) NOT NULL, at INT NOT NULL)',
-            'progress(user_id INT NOT NULL, track VARCHAR(191) NOT NULL, PRIMARY KEY(user_id, track))',
-            'strokes(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)',
-            'writing(user_id INT NOT NULL, track VARCHAR(191) NOT NULL, stars INT, PRIMARY KEY(user_id, track))',
-            'anim(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // a letter's living picture (see clean_anim)
-            'anim_prev(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // the version it replaced, to undo a mistake
-        ] as $t) $db->exec("CREATE TABLE IF NOT EXISTS $t$table");
-        // columns added after the first release
-        $cols = $cfg ? array_column($db->query('SHOW COLUMNS FROM users')->fetchAll(), 'Field')
-            : array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
-        foreach (['token VARCHAR(64)', 'is_admin INT NOT NULL DEFAULT 0', 'last_login DATETIME'] as $col) {
-            if (!in_array(explode(' ', $col)[0], $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN $col");
+        try {
+            $v = (int)$db->query("SELECT v FROM meta WHERE k = 'schema'")->fetchColumn();
+        } catch (PDOException) {
+            $v = 0; // no meta table yet: a new database, or one from before SCHEMA_VERSION
         }
+        if ($v < SCHEMA_VERSION) migrate($db, (bool)$cfg);
     }
     return $db;
+}
+
+/** Brings any older database up to SCHEMA_VERSION without losing data; every step may run again safely. */
+function migrate(PDO $db, bool $mysql): void
+{
+    [$id, $nocase, $table] = $mysql ? ['INT AUTO_INCREMENT PRIMARY KEY', '', ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4']
+        : ['INTEGER PRIMARY KEY', ' COLLATE NOCASE', '']; // MySQL's default collation already ignores case
+    if (!$mysql) $db->exec('PRAGMA journal_mode=WAL;'); // kept in the file: once is enough
+    // types valid in both databases; keys are VARCHAR(191) so MySQL can index them in utf8mb4
+    foreach ([
+        "users(id $id, username VARCHAR(191) NOT NULL UNIQUE$nocase, pass VARCHAR(255) NOT NULL, created DATETIME DEFAULT CURRENT_TIMESTAMP)",
+        'codes(code VARCHAR(191) PRIMARY KEY, user_id INT UNIQUE)',
+        'fails(ip VARCHAR(45) NOT NULL, at INT NOT NULL)',
+        'progress(user_id INT NOT NULL, track VARCHAR(191) NOT NULL, PRIMARY KEY(user_id, track))',
+        'strokes(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)',
+        'writing(user_id INT NOT NULL, track VARCHAR(191) NOT NULL, stars INT, PRIMARY KEY(user_id, track))',
+        'anim(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // a letter's living picture (see clean_anim)
+        'anim_prev(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // the version it replaced, to undo a mistake
+        'meta(k VARCHAR(191) PRIMARY KEY, v VARCHAR(191))', // the schema version
+    ] as $t) $db->exec("CREATE TABLE IF NOT EXISTS $t$table");
+    // columns added after the first release
+    $cols = $mysql ? array_column($db->query('SHOW COLUMNS FROM users')->fetchAll(), 'Field')
+        : array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
+    foreach (['token VARCHAR(64)', 'is_admin INT NOT NULL DEFAULT 0', 'last_login DATETIME'] as $col) {
+        if (!in_array(explode(' ', $col)[0], $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN $col");
+    }
+    $db->prepare('REPLACE INTO meta(k, v) VALUES (?, ?)')->execute(['schema', (string)SCHEMA_VERSION]);
 }
 
 function is_mysql(): bool
@@ -105,11 +127,14 @@ function record_fail(): void
     db()->prepare('INSERT INTO fails VALUES (?, ?)')->execute([$_SERVER['REMOTE_ADDR'] ?? '', time()]);
 }
 
-/** Sorted list of mp3 paths; the index is the track id. */
+/** Sorted list of mp3 paths; the index is the track id. Looked up once per request. */
 function tracks(): array
 {
-    $files = glob(ROOT . '/data/media/*.mp3');
-    sort($files);
+    static $files = null;
+    if ($files === null) {
+        $files = glob(ROOT . '/data/media/*.mp3') ?: [];
+        sort($files);
+    }
     return $files;
 }
 
@@ -128,13 +153,19 @@ function track_title(string $file): string
     return LETTERS[(int)$name - 1] ?? trim(preg_replace(['/^\d+\s*/', '/\s*Master G2$/i'], '', $name));
 }
 
-/** Source image file for track #i (img/02.webp for the 2nd track…), falling back to the first image. */
+/** Source image file for track #i (img/02.webp for the 2nd track…, webp before jpg before png), falling back to the first image. */
 function track_image_file(int $i): ?string
 {
-    $all = glob(ROOT . '/public/img/*.{webp,jpg,jpeg,png}', GLOB_BRACE);
-    sort($all);
-    $own = glob(ROOT . '/public/img/' . sprintf('%02d', $i + 1) . '.{webp,jpg,jpeg,png}', GLOB_BRACE);
-    return $own[0] ?? $all[0] ?? null;
+    static $all = null; // the folder is listed once per request, not twice per letter
+    if ($all === null) {
+        $all = glob(ROOT . '/public/img/*.{webp,jpg,jpeg,png}', GLOB_BRACE) ?: [];
+        sort($all);
+    }
+    $nn = sprintf('%02d', $i + 1);
+    foreach (['webp', 'jpg', 'jpeg', 'png'] as $ext) {
+        if (in_array($f = ROOT . "/public/img/$nn.$ext", $all, true)) return $f;
+    }
+    return $all[0] ?? null;
 }
 
 const IMAGE_WIDTHS = [240, 1200]; // thumbnail, cover

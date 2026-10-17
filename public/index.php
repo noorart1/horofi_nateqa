@@ -93,13 +93,16 @@ if ($logged) {
     $stars = $s->fetchAll(PDO::FETCH_KEY_PAIR);
     $stroked = array_flip(db()->query('SELECT track FROM strokes')->fetchAll(PDO::FETCH_COLUMN));
     $list = [];
+    $animated = is_file(__DIR__ . '/anim/player.html') ? array_flip(db()->query('SELECT track FROM anim')->fetchAll(PDO::FETCH_COLUMN)) : [];
     foreach (tracks() as $i => $f) {
         $list[] = ['title' => track_title($f), 'glyph' => track_glyph($f), 'img' => track_image($i, 1200),
             'thumb' => track_image($i, 240), 'done' => isset($heard[basename($f)]),
-            'strokes' => isset($stroked[basename($f)]), 'stars' => (int)($stars[basename($f)] ?? 0)];
+            'strokes' => isset($stroked[basename($f)]), 'stars' => (int)($stars[basename($f)] ?? 0),
+            'anim' => isset($animated[basename($f)]) ? 'anim_data.php?track=' . rawurlencode(basename($f)) : null];
     }
 }
 $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
+$animPlayer = !empty($animated) ? 'anim/player.html?v=' . image_version(__DIR__ . '/anim/player.html') : null;
 $banner = image_url('headerontop.jpg', 1200);
 ?>
 <!doctype html>
@@ -111,6 +114,7 @@ $banner = image_url('headerontop.jpg', 1200);
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@700;800&family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
+<?php if ($animPlayer): ?><link rel="prefetch" href="<?= $h($animPlayer) ?>"><?php endif /* the living-picture player, cached before the first one is needed */ ?>
 </head>
 <body>
 <?php if (!$logged): ?>
@@ -187,6 +191,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
       <button id="shuffle" aria-label="تشغيل عشوائي" title="تشغيل عشوائي" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
       <button id="repeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="repeatIcon"/></svg></button>
       <button id="speed" class="speed" aria-label="سرعة التشغيل" title="سرعة التشغيل"></button>
+      <button id="camera" aria-label="حركة الكاميرا في الصورة الحية" title="حركة الكاميرا في الصورة الحية" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h10.5a2 2 0 0 1 2 2v1.6l3.6-2.4a.6.6 0 0 1 .9.5v7.6a.6.6 0 0 1-.9.5l-3.6-2.4v1.6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/></svg></button>
     </div>
   </section>
   <div class="letters-head"><h2>الحروف</h2><span id="progress"></span></div>
@@ -207,6 +212,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
 <script>
 const TRACKS = <?= json_encode($list, JSON_UNESCAPED_UNICODE) ?>;
 const KEY = Uint8Array.from(atob('<?= base64_encode($_SESSION['key']) ?>'), c => c.charCodeAt(0));
+const ANIM = <?= json_encode($animPlayer) ?>;
 </script>
 <script src="vendor/anime-4.5.0.umd.min.js"></script>
 <script src="party.js?v=<?= filemtime(__DIR__ . '/party.js') ?>"></script>

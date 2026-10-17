@@ -1,5 +1,7 @@
 # private: license codes, database, paid media
-license.xlsx
+license*.xlsx
+# the owner's animation editor carries the book's pictures (base64): never in git, never on the server
+tools/anim-editor-sample.html
 ~$*
 data/
 Master G2/

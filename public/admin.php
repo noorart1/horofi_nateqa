@@ -119,7 +119,7 @@ textarea { width:100%; min-height:90px; margin:10px 0; padding:10px; border:1px 
 </head>
 <body>
 <main class="admin">
-  <div class="bar-top"><h1>لوحة الإدارة</h1><span><a href="admin_strokes.php">مسارات الكتابة</a> · <a href="./">العودة إلى المشغّل</a></span></div>
+  <div class="bar-top"><h1>لوحة الإدارة</h1><span><a href="admin_strokes.php">مسارات الكتابة</a> · <a href="admin_anim.php">الصور الحية</a> ·<a href="./">العودة إلى المشغّل</a></span></div>
   <?php if ($msg): ?><p class="ok" role="status"><?= $h($msg) ?></p><?php endif ?>
 
   <div class="stats">

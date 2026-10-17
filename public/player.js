@@ -1,15 +1,17 @@
 // Player: decoding, waveform, swipeable cover, letter grid, shuffle/repeat, speed.
-// Expects TRACKS and KEY globals from index.php.
+// Expects TRACKS, KEY and ANIM globals from index.php.
 const $ = id => document.getElementById(id);
 const PLAY = 'M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z',
   PAUSE = 'M7 5h3.2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm6.8 0H17a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-3.2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z';
 const BAR = 7, GAP = 5; // waveform bar width / gap in CSS px: fat, round, toy-like
 // offset/pos are in seconds of the original recording, whatever the speed
 let ctx, buf, src, startAt = 0, offset = 0, playing = false, cur = -1, loadId = 0, rate = 1, stretched = {};
+let viaAnim = false; // the song is playing inside the living picture (startAt is then in performance.now() seconds)
 let peaks = null, hover = -1, drag = null, drawn = '', raf = 0;
 
 const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-const pos = () => playing ? Math.min((ctx.currentTime - startAt) * rate, buf.duration) : offset;
+const pos = () => !playing ? offset
+  : Math.min(viaAnim ? performance.now() / 1000 - startAt : (ctx.currentTime - startAt) * rate, buf?.duration ?? Infinity);
 
 // letters listened to the end, stored on the server so they follow the user to any device
 const done = new Set(TRACKS.flatMap((t, i) => t.done ? [i] : []));
@@ -128,36 +130,58 @@ function stopSrc() {
 function play() {
   if (!buf) return load(Math.max(cur, 0));
   ctx.resume();
+  // a letter with a living picture plays its song there; the page follows on 'anim:play'
+  if (live()) return anim.contentWindow.postMessage({ seek: offset, play: true }, location.origin);
+  if (anim?.dataset.i === String(cur) && !anim.late) { // its picture is still loading: start the song there once it is up
+    const a = anim, id = loadId;
+    $('status').textContent = 'جارٍ التحميل…';
+    Promise.race([a.ready, new Promise(r => setTimeout(r, 8000))]).then(() => {
+      a.late = !live(); // it never came up: the page plays the song itself
+      $('status').textContent = '';
+      if (id === loadId && anim === a && !playing) play();
+    });
+    return;
+  }
+  hushAnim(); // never two songs at once
   stopSrc();
   src = ctx.createBufferSource();
   src.buffer = rate === 1 ? buf : (stretched[rate] ??= stretch(buf, rate));
   if (!meter) { meter = ctx.createAnalyser(); meter.fftSize = 512; meter.connect(ctx.destination); }
   src.connect(meter);
-  src.onended = () => {
-    playing = false; offset = 0; setIcon();
-    const party = markDone(cur), id = loadId;
-    const go = () => {
-      if (id !== loadId || playing) return; // the child picked something else during the party
-      if (repeat === 'one') return play();
-      if (repeat === 'all' || shuffle || cur < TRACKS.length - 1) load(nextIndex()); // 'next' stops after the last letter
-    };
-    party ? party.then(go) : go(); // the next letter waits for the celebration
-  };
+  src.onended = ended;
   src.start(0, offset / rate);
   startAt = ctx.currentTime - offset / rate;
   playing = true;
   setIcon();
 }
 
+// the song reached its end (here or in the living picture): the letter is learned, then on to the next one
+function ended() {
+  playing = viaAnim = false; offset = 0; setIcon();
+  const party = markDone(cur), id = loadId;
+  const go = () => {
+    if (id !== loadId || playing) return; // the child picked something else during the party
+    if (repeat === 'one') return play();
+    if (repeat === 'all' || shuffle || cur < TRACKS.length - 1) load(nextIndex()); // 'next' stops after the last letter
+  };
+  party ? party.then(go) : go(); // the next letter waits for the celebration
+}
+
 function pause() {
   if (buf) offset = pos();
+  if (viaAnim) hushAnim();
   stopSrc();
-  playing = false;
+  playing = viaAnim = false;
   setIcon();
 }
 
 function seek(t) {
   offset = Math.min(Math.max(t, 0), buf.duration - 0.05);
+  if (live()) { // the living picture jumps too; the page's clock follows its 'anim:play'
+    if (playing) startAt = performance.now() / 1000 - offset;
+    anim.contentWindow.postMessage({ seek: offset, play: playing }, location.origin);
+    return redraw();
+  }
   if (playing) play();
   redraw();
 }
@@ -249,6 +273,9 @@ function show(i, scroll = true) {
     if (!first) swapBadge($('badgeGlyph'));
   }
   $('writeBtn').hidden = !TRACKS[i]?.strokes;
+  showAnim(i);
+  $('speed').disabled = !!(ANIM && TRACKS[i]?.anim); // the living picture sings at its own speed
+  $('camera').hidden = !(ANIM && TRACKS[i]?.anim);
   ensureImg(i - 1); ensureImg(i); ensureImg(i + 1);
   stripTo(i);
   $('counter').textContent = `${(i + 1).toLocaleString('ar')} / ${TRACKS.length.toLocaleString('ar')}`;
@@ -260,16 +287,100 @@ function show(i, scroll = true) {
 // "back" history for the previous button in shuffle mode
 function remember(i) { if (cur >= 0 && i !== cur) backStack.push(cur); }
 
-// one letter's recording: fetched, unscrambled with the session key and decoded (writing.js uses it too)
+// one letter's mp3, fetched and unscrambled with the session key; the last few are kept, shared by the player
+// and the living pictures (the current letter's and the neighbours' loading ahead)
+const bytes = new Map();
+function trackBytes(i) {
+  if (!bytes.has(i)) {
+    const p = (async () => {
+      const r = await fetch('audio.php?t=' + i, { headers: { 'X-Player': '1' }, cache: 'no-store' });
+      if (r.status === 403) location.reload();
+      if (!r.ok) throw 0;
+      const a = new Uint8Array(await r.arrayBuffer());
+      for (let j = 0; j < a.length; j++) a[j] ^= KEY[j % KEY.length];
+      return a;
+    })();
+    bytes.set(i, p);
+    p.catch(() => { if (bytes.get(i) === p) bytes.delete(i); }); // a failed fetch is tried again next time
+    if (bytes.size > 4) bytes.delete(bytes.keys().next().value);
+  }
+  return bytes.get(i);
+}
+// ...and decoded (writing.js uses it too); a copy, because decoding takes over the bytes
 async function fetchTrack(i) {
   ctx ??= new AudioContext();
-  const r = await fetch('audio.php?t=' + i, { headers: { 'X-Player': '1' }, cache: 'no-store' });
-  if (r.status === 403) location.reload();
-  if (!r.ok) throw 0;
-  const a = new Uint8Array(await r.arrayBuffer());
-  for (let j = 0; j < a.length; j++) a[j] ^= KEY[j % KEY.length];
-  return ctx.decodeAudioData(a.buffer);
+  return ctx.decodeAudioData((await trackBytes(i)).slice().buffer);
 }
+
+// --- living picture: the letter's animation (anim/player.html, made in the owner's editor) over its cover ---
+// The song goes in as a blob: URL, so the mp3 never gets a plain address. One player: the page's buttons and waveform
+// drive the picture ({seek, play} messages), and the page keeps time with its own clock (waveform, minutes, the star at the end).
+// The neighbours' pictures load ahead out of sight (display:none, so they don't draw), so a swipe finds them ready.
+const frames = new Map(); // letter → its iframe: the current letter's and its neighbours'
+let anim = null; // the current letter's iframe, if it has an animation
+const hasAnim = i => !!(ANIM && TRACKS[i]?.anim);
+function animFrame(i) {
+  if (frames.has(i)) return frames.get(i);
+  const f = Object.assign(document.createElement('iframe'), { className: 'anim-frame', title: `الصورة الحية لحرف ${TRACKS[i].title}` });
+  f.allow = 'autoplay';
+  f.dataset.i = i;
+  f.dataset.audio = '';
+  f.ready = new Promise(r => f.isReady = r);
+  f.shownP = new Promise(r => f.isShown = r);
+  frames.set(i, f);
+  // the picture loads first; the song (about 1.5 MB, so it would slow the picture down) only once the picture is drawn
+  f.song = f.shownP.then(() => trackBytes(i)).then(a => {
+    const url = URL.createObjectURL(new Blob([a], { type: 'audio/mpeg' }));
+    if (frames.get(i) === f) f.dataset.audio = url; else URL.revokeObjectURL(url); // dropped meanwhile
+    return f.dataset.audio;
+  }, () => '');
+  const abs = u => encodeURIComponent(new URL(u, location.href).href); // the player resolves links against its own folder
+  f.src = `${ANIM}&data=${abs(TRACKS[i].anim)}&img=${abs(TRACKS[i].img)}`;
+  $('cover').insertBefore(f, $('counter')); // fades in over the still picture once drawn; if it fails, the picture stays
+  return f;
+}
+function showAnim(i) {
+  const keep = [i, i - 1, i + 1].filter(hasAnim);
+  for (const [j, f] of frames) if (!keep.includes(j)) { URL.revokeObjectURL(f.dataset.audio); f.remove(); frames.delete(j); }
+  anim?.classList.remove('cur');
+  anim = hasAnim(i) ? animFrame(i) : null; // the current one first, so it loads first
+  anim?.classList.add('cur');
+  keep.forEach(animFrame);
+  const f = anim;
+  if (f && !buf && cur === i) f.shownP.then(() => fetchTrack(i)).then(b => { if (anim === f && !buf) { buf = b; $('dur').textContent = fmt(b.duration); redraw(); } }, () => {});
+}
+// the current letter's living picture is up and has its song: it plays the letter
+const live = () => !!(anim?.classList.contains('ready') && anim.dataset.audio && anim.dataset.i === String(cur));
+function hushAnim() { anim?.contentWindow?.postMessage('stop', location.origin); }
+// the camera moving between the singers is the viewer's choice (off unless turned on; remembered per browser)
+let camera = false;
+try { camera = localStorage.getItem('camera') === '1'; } catch {}
+const tellCamera = (f = anim) => f?.contentWindow?.postMessage({ camera }, location.origin);
+function renderCamera() {
+  $('camera').classList.toggle('on', camera);
+  $('camera').ariaPressed = String(camera);
+}
+$('camera').onclick = () => {
+  camera = !camera;
+  renderCamera();
+  frames.forEach(f => tellCamera(f));
+  try { localStorage.setItem('camera', camera ? '1' : '0'); } catch {}
+};
+renderCamera();
+addEventListener('message', e => {
+  const f = e.origin === location.origin && [...frames.values()].find(x => x.contentWindow === e.source);
+  if (!f) return;
+  if (e.data === 'anim:shown') { f.classList.add('shown'); f.isShown(); tellCamera(f); f.song.then(url => f.contentWindow?.postMessage({ audio: url }, location.origin)); }
+  if (e.data === 'anim:ready') { f.classList.add('ready'); f.isReady(); }
+  if (f !== anim) return; // a neighbour loading ahead
+  if (e.data === 'anim:play') { // from its own ▶ or from ours: the page follows
+    stopSrc();
+    ctx?.resume(); // inside the child's tap, so the next letter may start by itself later
+    startAt = performance.now() / 1000 - offset; // it goes on from where it stopped
+    playing = viaAnim = true;
+    setIcon();
+  } else if (e.data === 'anim:ended' && viaAnim) ended(); // the whole song was heard, like the end of a recording
+});
 
 async function load(i, track = true) {
   if (track) remember(i);
@@ -405,13 +516,26 @@ function tick() {
 let meter = null, level = 0, loud = 2, prevTarget = 0, lastBeat = 0;
 const still = matchMedia('(prefers-reduced-motion: reduce)');
 const wave = new Uint8Array(512);
+// loudness of the moment being heard, on the analyser's 0..128 scale. A living picture plays the song in its own frame,
+// so then it is read from the page's copy of the same recording, at the same moment and over the same 512 samples.
+function loudness() {
+  if (!playing) return null;
+  let sum = 0;
+  if (viaAnim) {
+    if (!buf) return null;
+    const d = buf.getChannelData(0), i = Math.floor(pos() * buf.sampleRate);
+    for (let j = i; j < Math.min(i + 512, d.length); j++) sum += d[j] * d[j];
+    return Math.sqrt(sum / 512) * 128;
+  }
+  if (!meter) return null;
+  meter.getByteTimeDomainData(wave);
+  for (const v of wave) sum += (v - 128) * (v - 128);
+  return Math.sqrt(sum / wave.length);
+}
 function sing() {
   let target = 0;
-  if (playing && meter) {
-    meter.getByteTimeDomainData(wave);
-    let sum = 0;
-    for (const v of wave) sum += (v - 128) * (v - 128);
-    const rms = Math.sqrt(sum / wave.length);
+  const rms = loudness();
+  if (rms !== null) {
     loud = Math.max(rms, loud * 0.997, 2); // loudest moment so far, slowly forgotten: every song hops the same amount
     target = (rms / loud) ** 2; // squared, so beats hop and the quiet parts rest
     // a strong beat (loud and rising) sends a note out of the letter
@@ -424,8 +548,8 @@ function sing() {
   // "reduce motion" (e.g. Windows' Animation effects off) gets a gentle pulse only: no hop, no tilt
   $('badge').style.transform = !level ? '' : still.matches ? `scale(${1 + level * 0.05})`
     : `translateY(${-level * 16}px) scale(${1 + level * 0.14}) rotate(${Math.sin(performance.now() / 260) * level * 6}deg)`;
-  // the card picture breathes with the song (about 1%); left still under "reduce motion"
-  $('cover').style.transform = level && !still.matches ? `scale(${1 + level * 0.012})` : '';
+  // the card picture breathes with the song (about 1%); left still under "reduce motion", and a living picture moves by itself
+  $('cover').style.transform = level && !still.matches && !viaAnim ? `scale(${1 + level * 0.012})` : '';
   if (level && !playing) redraw(); // let it settle after a pause
 }
 addEventListener('resize', redraw);

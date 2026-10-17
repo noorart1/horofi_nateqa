@@ -43,6 +43,12 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .counter { position:absolute; top:10px; left:12px; background:#ffffffe6; color:var(--ink); font-size:.85rem; font-weight:700;
   padding:3px 12px; border-radius:999px; pointer-events:none; font-variant-numeric:tabular-nums; }
 @media (prefers-reduced-motion:reduce) { .strip { transition:none; } }
+/* living picture over the cover (same ratio as the card picture); the player fits itself inside */
+/* it fades in over the still picture once drawn: the same picture, so only the mouths and effects seem to appear */
+.anim-frame { position:absolute; inset:0; width:100%; height:100%; border:0; background:#fff; opacity:0; pointer-events:none;
+  transition:opacity .35s ease-out; }
+.anim-frame.shown { opacity:1; pointer-events:auto; }
+.anim-frame:not(.cur) { display:none; } /* a neighbour loading ahead: not drawn until it is the current letter */
 /* thumbnail picker */
 .thumbs { display:flex; gap:10px; overflow-x:auto; padding:14px 4px 10px; scroll-snap-type:x proximity; scrollbar-width:thin; }
 .thumb { flex:0 0 84px; position:relative; aspect-ratio:1299 / 1594; padding:0; border:3px solid #fff; border-radius:16px; overflow:hidden; background:#fff;
@@ -52,40 +58,40 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .thumb img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
 .thumb b { position:absolute; inset:auto 0 0; background:#00395fcc; color:#fff; font-size:.95rem; padding:4px 0 2px; }
 /* player: a chunky toy in the cards' colours; the letter in its ring "sings" (player.js scales it with the song's loudness) */
-.sc { position:relative; margin-top:16px; padding:clamp(44px, 8vw, 56px) 18px 14px; border-radius:28px; /* room for the ring and the badge's highest hop */ background:var(--sun); color:var(--ink);
+.sc { position:relative; margin-top:16px; padding:30px 16px 10px; border-radius:28px; /* room for the ring and the badge's highest hop */ background:var(--sun); color:var(--ink);
   box-shadow:0 10px 24px -10px #b07a0066, inset 0 -6px 0 #0000000d; }
 .sc button { font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .sc button:focus-visible, .sc .wave:focus-visible { outline:3px solid var(--blue); outline-offset:4px; }
 .sc svg { display:block; }
-.sc-stage { display:flex; align-items:center; justify-content:center; gap:clamp(16px, 4vw, 28px); }
-.badge { flex:none; margin:0 6px; width:clamp(84px, 24vw, 156px); aspect-ratio:1; border-radius:50%; background:#fff; display:grid; place-items:center;
+.sc-stage { display:flex; align-items:center; justify-content:center; gap:clamp(14px, 3vw, 22px); }
+.badge { flex:none; margin:0 6px; width:clamp(64px, 17vw, 96px); aspect-ratio:1; border-radius:50%; background:#fff; display:grid; place-items:center;
   box-shadow:0 0 0 7px var(--sky), 0 0 0 11px #fff, 0 12px 18px -6px #00507a55; transform-origin:50% 85%; will-change:transform; }
-.badge span { font-family:Rubik, Vazirmatn, sans-serif; font-weight:800; font-size:clamp(2.6rem, 9vw, 5rem); line-height:1; color:var(--berry);
+.badge span { font-family:Rubik, Vazirmatn, sans-serif; font-weight:800; font-size:clamp(2rem, 6.5vw, 3.2rem); line-height:1; color:var(--berry);
   translate:0 .04em; }
 .sc-meta { min-width:0; flex:0 1 auto; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
-.sc-title { margin:0; font-family:Rubik, Vazirmatn, sans-serif; font-weight:800; font-size:clamp(1.9rem, 7vw, 3.2rem); line-height:1.1;
+.sc-title { margin:0; font-family:Rubik, Vazirmatn, sans-serif; font-weight:800; font-size:clamp(1.6rem, 6vw, 2.4rem); line-height:1.1;
   color:var(--blue-deep); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 .write-btn { display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:8px 18px 8px 16px; border:0; border-radius:999px;
   background:#fff; color:var(--blue); font-weight:700; font-size:1.05rem; box-shadow:0 4px 0 -1px var(--sun-deep), 0 6px 12px -6px #0004;
   transition:transform .12s, box-shadow .12s; }
 .write-btn svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 .write-btn:active { transform:translateY(3px); box-shadow:0 1px 0 -1px var(--sun-deep), 0 2px 6px -4px #0004; }
-.sc-controls { display:flex; justify-content:center; align-items:center; gap:clamp(14px, 5vw, 28px); margin:22px 0 18px; }
+.sc-controls { display:flex; justify-content:center; align-items:center; gap:clamp(14px, 5vw, 24px); margin:16px 0 10px; }
 .sc-play, .skip { border:0; border-radius:50%; display:grid; place-items:center; transition:transform .12s cubic-bezier(.2,.8,.2,1), box-shadow .12s; }
-.sc-play { width:clamp(92px, 27vw, 116px); aspect-ratio:1; background:var(--blue); color:#fff;
+.sc-play { width:92px; aspect-ratio:1; background:var(--blue); color:#fff;
   box-shadow:0 8px 0 var(--blue-deep), 0 14px 20px -8px #003a5e88; }
 .sc-play svg { width:48%; height:48%; fill:currentColor; }
-.skip { width:clamp(64px, 18vw, 76px); aspect-ratio:1; background:#fff; color:var(--blue); box-shadow:0 6px 0 var(--sun-deep), 0 10px 16px -8px #0005; }
+.skip { width:60px; aspect-ratio:1; background:#fff; color:var(--blue); box-shadow:0 6px 0 var(--sun-deep), 0 10px 16px -8px #0005; }
 .skip svg { width:46%; height:46%; fill:none; stroke:currentColor; stroke-width:3.6; stroke-linecap:round; stroke-linejoin:round; }
 @media (hover:hover) { .sc-play:hover, .skip:hover { transform:translateY(-2px); } }
 .sc-play:active { transform:translateY(6px); box-shadow:0 2px 0 var(--blue-deep), 0 4px 8px -6px #003a5e88; }
 .skip:active { transform:translateY(5px); box-shadow:0 1px 0 var(--sun-deep), 0 3px 6px -5px #0005; }
-.wave { position:relative; height:72px; cursor:pointer; touch-action:none; border-radius:18px; }
+.wave { position:relative; height:56px; cursor:pointer; touch-action:none; border-radius:18px; }
 .wave canvas { width:100%; height:100%; display:block; transform:scaleX(-1); } /* right-to-left progress */
 .sc-times { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; margin-top:4px; font-size:.8rem; font-weight:600;
   font-variant-numeric:tabular-nums; color:#6b5200; }
 .status { text-align:center; color:var(--ink); font-size:.9rem; }
-.sc-grown { display:flex; justify-content:center; gap:10px; margin-top:8px; padding-top:12px; border-top:2px dashed #0000001a; }
+.sc-grown { display:flex; justify-content:center; gap:10px; margin-top:4px; padding-top:8px; border-top:2px dashed #0000001a; }
 .sc-grown button { min-width:44px; height:44px; padding:0 10px; border:0; border-radius:14px; background:#ffffff66; color:#7a5d00;
   display:grid; place-items:center; transition:background .15s, color .15s; }
 .sc-grown svg { width:22px; height:22px; fill:currentColor; }

@@ -94,7 +94,7 @@ components:
     backgroundColor: "{colors.sun}"
     textColor: "{colors.ink}"
     rounded: "{rounded.panel}"
-    padding: "clamp(44px, 8vw, 56px) 18px 14px"
+    padding: "30px 16px 10px"
   button-primary:
     backgroundColor: "{colors.blue}"
     textColor: "{colors.card}"
@@ -111,12 +111,12 @@ components:
     backgroundColor: "{colors.blue}"
     textColor: "{colors.card}"
     rounded: "{rounded.round}"
-    size: "clamp(92px, 27vw, 116px)"
+    size: "92px"
   button-skip:
     backgroundColor: "{colors.card}"
     textColor: "{colors.blue}"
     rounded: "{rounded.round}"
-    size: "clamp(64px, 18vw, 76px)"
+    size: "60px"
   button-write:
     backgroundColor: "{colors.card}"
     textColor: "{colors.blue}"
@@ -173,7 +173,7 @@ components:
     textColor: "{colors.berry}"
     typography: "{typography.glyph}"
     rounded: "{rounded.round}"
-    size: "clamp(84px, 24vw, 156px)"
+    size: "clamp(64px, 17vw, 96px)"
   pill-cert:
     backgroundColor: "{colors.sun}"
     textColor: "{colors.blue-deep}"
@@ -271,7 +271,7 @@ One-offs, not part of the ramp: the tile number (.7rem), the certificate name fi
 
 ## Layout
 
-A single centred column on the pale sky ground: the login card is at most 440px wide, the player page 760px, the writing pad 520px. The body is padded 24px by 16px. The player page stacks a top row (user and logout pill), the banner, the swipeable cover picture, the thumbnail strip, the yellow player panel, the letter-grid heading and rewards row, then the grid (7 columns, 4 below 560px, 10px gaps). Inside the player: the badge beside the name and the writing pill, then prev | play | next (in RTL "next" sits on the left), the 72px waveform (bars 7px wide with 5px gaps), times, then the grown-up row below a 2px dashed rule. Child-control sizes scale with `clamp()` against viewport width instead of breakpoints. The writing overlay fills the screen; the pad is sized to fit the viewport height minus 240px.
+A single centred column on the pale sky ground: the login card is at most 440px wide, the player page 760px, the writing pad 520px. The body is padded 24px by 16px. The player page stacks a top row (user and logout pill), the banner, the swipeable cover picture, the thumbnail strip, the yellow player panel, the letter-grid heading and rewards row, then the grid (7 columns, 4 below 560px, 10px gaps). Inside the player: the badge beside the name and the writing pill, then prev | play | next (in RTL "next" sits on the left), the 56px waveform (bars 7px wide with 5px gaps; on a letter with a living picture it also moves the picture's song), times, then the grown-up row below a 2px dashed rule. Child-control sizes scale with `clamp()` against viewport width instead of breakpoints. The writing overlay fills the screen; the pad is sized to fit the viewport height minus 240px.
 
 ## Elevation & Depth
 

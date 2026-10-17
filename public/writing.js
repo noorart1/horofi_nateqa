@@ -97,6 +97,7 @@ addEventListener('resize', resize);
 // --- open / watch / reset ---
 async function openWriting(i) {
   if (playing) pause();
+  hushAnim();
   ctx ??= new AudioContext(); ctx.resume(); // inside the click, so the letter's voice may play later (iOS)
   $('wTitle').textContent = `اكتب حرف ${TRACKS[i].title}`;
   $('wMsg').textContent = 'جارٍ التحميل…';

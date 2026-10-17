@@ -1,0 +1,10 @@
+# anim/player.html: the living-picture player, framed only by this site's own pages.
+# Its URL carries ?v=<version>, so a new copy gets a new URL and the old one may be cached for a year.
+<IfModule mod_headers.c>
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Content-Security-Policy "frame-ancestors 'self'"
+  Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html
+</IfModule>

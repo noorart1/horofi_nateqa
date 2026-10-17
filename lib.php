@@ -39,6 +39,8 @@ function db(): PDO
             'progress(user_id INT NOT NULL, track VARCHAR(191) NOT NULL, PRIMARY KEY(user_id, track))',
             'strokes(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)',
             'writing(user_id INT NOT NULL, track VARCHAR(191) NOT NULL, stars INT, PRIMARY KEY(user_id, track))',
+            'anim(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // a letter's living picture (see clean_anim)
+            'anim_prev(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // the version it replaced, to undo a mistake
         ] as $t) $db->exec("CREATE TABLE IF NOT EXISTS $t$table");
         // columns added after the first release
         $cols = $cfg ? array_column($db->query('SHOW COLUMNS FROM users')->fetchAll(), 'Field')
@@ -154,4 +156,69 @@ function track_image(int $i, int $width): string
 {
     $f = track_image_file($i);
     return $f ? image_url(basename($f), $width) : '';
+}
+
+/**
+ * A letter's living picture as exported by the owner's editor (kind "horofi-anim"), checked before it is stored.
+ * Null if it can't be stored, with the reason (in Arabic) in $why. Unknown keys are kept on purpose: the engine
+ * gains fields over time, and the player never shows text from the file as HTML, so caps and types are the guard.
+ */
+function clean_anim(string $json, ?string &$why = null): ?array
+{
+    $why = null;
+    try {
+        if (strlen($json) > 3 << 20) throw new RuntimeException('حجم الملف أكبر من ٣ ميغابايت.');
+        $j = json_decode($json, false, 64); // objects stay objects, so {} and [] can be told apart
+        if (!$j instanceof stdClass) throw new RuntimeException('الملف ليس JSON صالحًا.');
+        if (($j->kind ?? null) !== 'horofi-anim') throw new RuntimeException('هذا الملف ليس ملف صورة حية من المحرر.');
+        if (($j->schema ?? null) !== 1) throw new RuntimeException('إصدار الملف (schema) غير مدعوم في الموقع.');
+        $d = $j->data ?? null;
+        if (!$d instanceof stdClass || !is_array($d->frame ?? null) || count($d->frame) !== 5
+            || count(array_filter($d->frame, fn($v) => is_int($v) || is_float($v))) !== 5 || !is_array($d->sway ?? null)) {
+            throw new RuntimeException('بيانات الصورة الحية ناقصة (frame أو sway).');
+        }
+        foreach (['singers' => [6, 'المغنين'], 'sway' => [40, 'المناطق'], 'critters' => [40, 'الحيوانات']] as $k => [$max, $what]) {
+            if (count((array)($d->$k ?? [])) > $max) throw new RuntimeException("عدد $what أكثر من $max.");
+        }
+        if (count((array)($j->sheets ?? [])) > 8) throw new RuntimeException('عدد أوراق الفم أكثر من 8.');
+        anim_check($j);
+    } catch (RuntimeException $e) {
+        $why = $e->getMessage();
+        return null;
+    }
+    return json_decode($json, true);
+}
+
+/** Every value inside an animation: embedded files only as images/sounds of a capped size, short plain text, finite numbers. */
+function anim_check(mixed $v): void
+{
+    if (is_array($v) || $v instanceof stdClass) {
+        foreach ($v as $k => $x) {
+            if (is_string($k)) anim_check($k);
+            anim_check($x);
+        }
+    } elseif (is_float($v) && !is_finite($v)) { // e.g. 1e999 decodes to INF
+        throw new RuntimeException('في الملف رقم غير صالح.');
+    } elseif (is_string($v) && str_starts_with($v, 'data:')) {
+        [$head, $b64] = explode(',', $v, 2) + [1 => ''];
+        if (!preg_match('~^data:(image/(?:png|jpeg|webp)|audio/(?:mpeg|wav|ogg|mp4))(?:;[\w.+=-]+)*;base64$~D', $head, $m)) {
+            throw new RuntimeException('ملف مضمّن من نوع غير مسموح: ' . mb_substr($head, 5, 40));
+        }
+        $bin = base64_decode($b64, true);
+        if ($bin === false) throw new RuntimeException('ملف مضمّن تالف (' . $m[1] . ').');
+        $image = str_starts_with($m[1], 'image/');
+        if (strlen($bin) > ($image ? 1 << 20 : 800 << 10)) {
+            throw new RuntimeException($image ? 'صورة مضمّنة أكبر من ١ ميغابايت.' : 'صوت مضمّن أكبر من ٨٠٠ كيلوبايت.');
+        }
+    } elseif (is_string($v)) {
+        if (mb_strlen($v) > 200) throw new RuntimeException('نص أطول من ٢٠٠ حرف: ' . mb_substr($v, 0, 30) . '…');
+        if (preg_match('~<\s*/?\s*[a-z!?]~i', $v)) throw new RuntimeException('نص يحتوي على وسم HTML: ' . mb_substr($v, 0, 40));
+    }
+}
+
+/** Same letter, whatever hamza form the editor wrote (the alif track's glyph is a plain ا). */
+function same_letter(string $a, string $b): bool
+{
+    $plain = fn($s) => strtr(trim($s), ['أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا']);
+    return $plain($a) === $plain($b);
 }

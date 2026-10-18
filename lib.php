@@ -191,27 +191,27 @@ function track_image(int $i, int $width): string
 
 /**
  * A letter's living picture as exported by the owner's editor (kind "horofi-anim"), checked before it is stored.
- * Null if it can't be stored, with the reason (in Arabic) in $why. Unknown keys are kept on purpose: the engine
+ * Null if it can't be stored, with the reason (in English, for the admin page) in $why. Unknown keys are kept on purpose: the engine
  * gains fields over time, and the player never shows text from the file as HTML, so caps and types are the guard.
  */
 function clean_anim(string $json, ?string &$why = null): ?array
 {
     $why = null;
     try {
-        if (strlen($json) > 3 << 20) throw new RuntimeException('حجم الملف أكبر من ٣ ميغابايت.');
+        if (strlen($json) > 3 << 20) throw new RuntimeException('The file is larger than 3 MB.');
         $j = json_decode($json, false, 64); // objects stay objects, so {} and [] can be told apart
-        if (!$j instanceof stdClass) throw new RuntimeException('الملف ليس JSON صالحًا.');
-        if (($j->kind ?? null) !== 'horofi-anim') throw new RuntimeException('هذا الملف ليس ملف صورة حية من المحرر.');
-        if (($j->schema ?? null) !== 1) throw new RuntimeException('إصدار الملف (schema) غير مدعوم في الموقع.');
+        if (!$j instanceof stdClass) throw new RuntimeException('The file is not valid JSON.');
+        if (($j->kind ?? null) !== 'horofi-anim') throw new RuntimeException('This is not a living picture file from the editor.');
+        if (($j->schema ?? null) !== 1) throw new RuntimeException('This file version (schema) is not supported by the site.');
         $d = $j->data ?? null;
         if (!$d instanceof stdClass || !is_array($d->frame ?? null) || count($d->frame) !== 5
             || count(array_filter($d->frame, fn($v) => is_int($v) || is_float($v))) !== 5 || !is_array($d->sway ?? null)) {
-            throw new RuntimeException('بيانات الصورة الحية ناقصة (frame أو sway).');
+            throw new RuntimeException('The living picture data is incomplete (frame or sway).');
         }
-        foreach (['singers' => [6, 'المغنين'], 'sway' => [40, 'المناطق'], 'critters' => [40, 'الحيوانات']] as $k => [$max, $what]) {
-            if (count((array)($d->$k ?? [])) > $max) throw new RuntimeException("عدد $what أكثر من $max.");
+        foreach (['singers' => [6, 'singers'], 'sway' => [40, 'sway areas'], 'critters' => [40, 'critters']] as $k => [$max, $what]) {
+            if (count((array)($d->$k ?? [])) > $max) throw new RuntimeException("More than $max $what.");
         }
-        if (count((array)($j->sheets ?? [])) > 8) throw new RuntimeException('عدد أوراق الفم أكثر من 8.');
+        if (count((array)($j->sheets ?? [])) > 8) throw new RuntimeException('More than 8 mouth sheets.');
         anim_check($j);
     } catch (RuntimeException $e) {
         $why = $e->getMessage();
@@ -229,21 +229,21 @@ function anim_check(mixed $v): void
             anim_check($x);
         }
     } elseif (is_float($v) && !is_finite($v)) { // e.g. 1e999 decodes to INF
-        throw new RuntimeException('في الملف رقم غير صالح.');
+        throw new RuntimeException('The file contains an invalid number.');
     } elseif (is_string($v) && str_starts_with($v, 'data:')) {
         [$head, $b64] = explode(',', $v, 2) + [1 => ''];
         if (!preg_match('~^data:(image/(?:png|jpeg|webp)|audio/(?:mpeg|wav|ogg|mp4))(?:;[\w.+=-]+)*;base64$~D', $head, $m)) {
-            throw new RuntimeException('ملف مضمّن من نوع غير مسموح: ' . mb_substr($head, 5, 40));
+            throw new RuntimeException('Embedded file of a type that is not allowed: ' . mb_substr($head, 5, 40));
         }
         $bin = base64_decode($b64, true);
-        if ($bin === false) throw new RuntimeException('ملف مضمّن تالف (' . $m[1] . ').');
+        if ($bin === false) throw new RuntimeException('Corrupt embedded file (' . $m[1] . ').');
         $image = str_starts_with($m[1], 'image/');
         if (strlen($bin) > ($image ? 1 << 20 : 800 << 10)) {
-            throw new RuntimeException($image ? 'صورة مضمّنة أكبر من ١ ميغابايت.' : 'صوت مضمّن أكبر من ٨٠٠ كيلوبايت.');
+            throw new RuntimeException($image ? 'Embedded image larger than 1 MB.' : 'Embedded sound larger than 800 KB.');
         }
     } elseif (is_string($v)) {
-        if (mb_strlen($v) > 200) throw new RuntimeException('نص أطول من ٢٠٠ حرف: ' . mb_substr($v, 0, 30) . '…');
-        if (preg_match('~<\s*/?\s*[a-z!?]~i', $v)) throw new RuntimeException('نص يحتوي على وسم HTML: ' . mb_substr($v, 0, 40));
+        if (mb_strlen($v) > 200) throw new RuntimeException('Text longer than 200 characters: ' . mb_substr($v, 0, 30) . '…');
+        if (preg_match('~<\s*/?\s*[a-z!?]~i', $v)) throw new RuntimeException('Text contains an HTML tag: ' . mb_substr($v, 0, 40));
     }
 }
 

@@ -3,7 +3,7 @@
 Site for learning the Arabic letters: a user registers with a one-time license code, then listens to 28 letter recordings in a SoundCloud-style player that resists downloading. Live at `https://abc.alburagh.com` (deployed 2026-10-15).
 
 ## Language
-- **All site text is in standard Arabic** (`lang="ar"`, Arabic digits via `toLocaleString('ar')`), including error messages, aria-labels and the admin panel. The end users are Arabic speakers.
+- **All site text is in standard Arabic** (`lang="ar"`, Arabic digits via `toLocaleString('ar')`), including error messages, aria-labels and the admin panel. The end users are Arabic speakers. Exception: `admin_anim.php` (and `clean_anim()`'s messages, shown only there) is in US English, at the owner's request.
 - The project owner chats in Persian, so replies to them are in Persian.
 
 ## Stack

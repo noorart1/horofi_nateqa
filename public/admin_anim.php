@@ -21,8 +21,8 @@ function page_mismatch(array $anim, int $t): ?string
     [$iw, $ih] = $img ? getimagesize($img) : [0, 0];
     [$pw, $ph] = array_map('floatval', array_values((array)($anim['page'] ?? [])) + [0, 0]);
     if (!$iw || !$ih || $pw <= 0 || $ph <= 0 || abs($pw / $ph - $iw / $ih) < 0.005) return null;
-    return 'الملف مصنوع على صورة بمقاس ' . round($pw) . '×' . round($ph) . '، أما صورة هذا الحرف في الموقع فمقاسها ' . "{$iw}×{$ih}"
-        . '، فستقع الأفواه في غير مكانها. افتح الصورة ' . basename($img) . ' من الموقع في المحرر، ثم صدّر الملف من جديد.';
+    return 'The file was made on a ' . round($pw) . '×' . round($ph) . " picture, but this letter's picture on the site is {$iw}×{$ih}"
+        . ', so the mouths would land in the wrong place. Open ' . basename($img) . ' from the site in the editor, then export the file again.';
 }
 
 // download the stored file, for a backup or to edit it again
@@ -42,7 +42,7 @@ if (isset($_GET['dl'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$_POST && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) { // over post_max_size: PHP drops the whole form
-        $_SESSION['flash'] = ['err', 'الملف أكبر مما يسمح به الخادم.'];
+        $_SESSION['flash'] = ['err', 'The file is larger than the server allows.'];
         header("Location: admin_anim.php?t=$t");
         exit;
     }
@@ -57,15 +57,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'upload':
             $up = $_FILES['file'] ?? null;
             if (!$up || $up['error'] === UPLOAD_ERR_NO_FILE) {
-                $flash = ['err', 'اختر ملفًا أولًا.'];
+                $flash = ['err', 'Choose a file first.'];
             } elseif (in_array($up['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
-                $flash = ['err', 'الملف أكبر مما يسمح به الخادم.'];
+                $flash = ['err', 'The file is larger than the server allows.'];
             } elseif ($up['error'] !== UPLOAD_ERR_OK) {
-                $flash = ['err', 'تعذّر رفع الملف، حاول مرة أخرى.'];
+                $flash = ['err', 'The upload failed. Please try again.'];
             } elseif (($anim = clean_anim($json = file_get_contents($up['tmp_name']), $why)) === null) {
-                $flash = ['err', "لم يُحفظ الملف: $why"];
+                $flash = ['err', "The file was not saved: $why"];
             } elseif (!same_letter((string)($anim['letter'] ?? ''), track_glyph($files[$t])) && empty($_POST['force'])) {
-                $flash = ['err', 'الملف مصنوع لحرف «' . ($anim['letter'] ?? '؟') . '» وليس لحرف «' . track_glyph($files[$t]) . '». لم يُحفظ.'];
+                $flash = ['err', 'This file was made for the letter ' . ($anim['letter'] ?? '?') . ', not ' . track_glyph($files[$t]) . '. It was not saved.'];
             } elseif ($why = page_mismatch($anim, $t)) { // made on another picture: every mouth would sit off its face
                 $flash = ['err', $why];
             } else {
@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $keep();
                 $db->prepare('REPLACE INTO anim(track, data, updated) VALUES (?, ?, ?)')->execute([$track, $json, gmdate(NOW)]);
                 $db->commit();
-                $flash = ['ok', 'تم حفظ الصورة الحية لحرف ' . track_title($files[$t]) . '.'];
+                $flash = ['ok', 'Living picture saved for ' . track_title($files[$t]) . '.'];
             }
             break;
         case 'delete':
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $keep();
             $db->prepare('DELETE FROM anim WHERE track = ?')->execute([$track]);
             $db->commit();
-            $flash = ['ok', 'تم حذف الصورة الحية. يمكنك استرجاعها بزر «استرجاع السابقة».'];
+            $flash = ['ok', 'Living picture deleted. You can bring it back with "Restore previous".'];
             break;
         case 'restore': // swap the current version and the kept one
             $get = function (string $table) use ($db, $track) {
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $now ? $db->prepare('REPLACE INTO anim_prev(track, data, updated) VALUES (?, ?, ?)')->execute([$track, $now['data'], $now['updated']])
                     : $db->prepare('DELETE FROM anim_prev WHERE track = ?')->execute([$track]);
                 $db->commit();
-                $flash = ['ok', 'تم استرجاع النسخة السابقة.'];
+                $flash = ['ok', 'The previous version was restored.'];
             }
             break;
     }
@@ -111,14 +111,14 @@ $saved = [];
 foreach ($db->query('SELECT track, updated, LENGTH(data) size FROM anim')->fetchAll() as $r) $saved[$r['track']] = $r;
 $prev = array_flip($db->query('SELECT track FROM anim_prev')->fetchAll(PDO::FETCH_COLUMN));
 $player = __DIR__ . '/anim/player.html';
-$kb = fn($n) => number_format($n / 1024) . ' ك.ب';
+$kb = fn($n) => number_format($n / 1024) . ' KB';
 ?>
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="en-US" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>الصور الحية</title>
+<title>Living Pictures</title>
 <link rel="stylesheet" href="fonts/vazirmatn.css?v=<?= filemtime(__DIR__ . '/fonts/vazirmatn.css') ?>">
 <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
 <style>
@@ -132,7 +132,7 @@ $kb = fn($n) => number_format($n / 1024) . ' ك.ب';
 @media (max-width:860px) { .cols { grid-template-columns:1fr; } .side { order:-1; } }
 .box { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; overflow-x:auto; }
 .tbl { width:100%; border-collapse:collapse; font-size:.88rem; }
-.tbl th, .tbl td { padding:8px 6px; border-bottom:1px solid var(--line); text-align:right; vertical-align:middle; }
+.tbl th, .tbl td { padding:8px 6px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
 .tbl th { color:var(--muted); font-weight:600; font-size:.8rem; }
 .tbl tr.on td { background:var(--bg); }
 .tbl b { font-size:1.4rem; }
@@ -152,33 +152,33 @@ $kb = fn($n) => number_format($n / 1024) . ' ك.ب';
 </head>
 <body>
 <main class="admin">
-  <div class="bar-top"><h1>الصور الحية</h1><a href="admin.php">العودة إلى لوحة الإدارة</a></div>
+  <div class="bar-top"><h1>Living Pictures</h1><a href="admin.php">Back to the admin panel</a></div>
   <?php if ($msg): ?><p class="<?= $kind === 'ok' ? 'ok' : 'bad' ?>" role="<?= $kind === 'ok' ? 'status' : 'alert' ?>"><?= $h($msg) ?></p><?php endif ?>
-  <?php if (!is_file($player)): ?><p class="bad">ملف المشغّل anim/player.html غير موجود على الخادم.</p><?php endif ?>
+  <?php if (!is_file($player)): ?><p class="bad">The player file anim/player.html is missing on the server.</p><?php endif ?>
   <div class="cols">
     <div class="box">
       <table class="tbl">
-        <tr><th>الحرف</th><th>الحالة</th><th>آخر تحديث</th><th>الحجم</th><th>إجراءات</th></tr>
+        <tr><th>Letter</th><th>Status</th><th>Last updated</th><th>Size</th><th>Actions</th></tr>
         <?php foreach ($files as $i => $f): $a = $saved[basename($f)] ?? null; ?>
         <tr class="<?= $i === $t ? 'on' : '' ?>">
           <td><a href="?t=<?= $i ?>"<?= $i === $t ? ' aria-current="true"' : '' ?>><b><?= $h(track_glyph($f)) ?></b> <?= $h(track_title($f)) ?></a></td>
-          <td class="<?= $a ? 'has' : 'none' ?>"><?= $a ? 'موجودة' : 'لا توجد' ?></td>
+          <td class="<?= $a ? 'has' : 'none' ?>"><?= $a ? 'Saved' : 'None' ?></td>
           <td dir="ltr"><?= $a ? $h(substr((string)$a['updated'], 0, 16)) : '—' ?></td>
           <td><?= $a ? $kb($a['size']) : '—' ?></td>
           <td>
             <div class="acts">
-              <a href="?t=<?= $i ?>"><?= $a ? 'معاينة' : 'رفع' ?></a>
+              <a href="?t=<?= $i ?>"><?= $a ? 'Preview' : 'Upload' ?></a>
               <?php if ($a): ?>
-              <a href="?t=<?= $i ?>&amp;dl=1">تنزيل</a>
-              <form method="post" action="?t=<?= $i ?>" onsubmit="return confirm('حذف الصورة الحية لهذا الحرف؟')">
+              <a href="?t=<?= $i ?>&amp;dl=1">Download</a>
+              <form method="post" action="?t=<?= $i ?>" onsubmit="return confirm('Delete the living picture for this letter?')">
                 <input type="hidden" name="csrf" value="<?= $h($_SESSION['csrf']) ?>"><input type="hidden" name="action" value="delete">
-                <button class="danger">حذف</button>
+                <button class="danger">Delete</button>
               </form>
               <?php endif ?>
               <?php if (isset($prev[basename($f)])): ?>
-              <form method="post" action="?t=<?= $i ?>" onsubmit="return confirm('استرجاع النسخة السابقة؟ تُحفظ النسخة الحالية مكانها.')">
+              <form method="post" action="?t=<?= $i ?>" onsubmit="return confirm('Restore the previous version? The current one is kept in its place.')">
                 <input type="hidden" name="csrf" value="<?= $h($_SESSION['csrf']) ?>"><input type="hidden" name="action" value="restore">
-                <button>استرجاع السابقة</button>
+                <button>Restore previous</button>
               </form>
               <?php endif ?>
             </div>
@@ -189,18 +189,18 @@ $kb = fn($n) => number_format($n / 1024) . ' ك.ب';
     </div>
     <?php if ($track !== ''): $a = $saved[$track] ?? null; [$iw, $ih] = ($img = track_image_file($t)) ? getimagesize($img) : [4, 5]; ?>
     <section class="box side">
-      <h2 style="font-size:1.1rem;margin:0 0 12px">حرف <?= $h(track_title($files[$t])) ?> (<?= $h(track_glyph($files[$t])) ?>)</h2>
+      <h2 style="font-size:1.1rem;margin:0 0 12px"><?= $h(track_title($files[$t])) ?> (<?= $h(track_glyph($files[$t])) ?>)</h2>
       <?php if ($a && is_file($player)): ?>
-      <iframe class="anim-preview" id="frame" title="معاينة الصورة الحية" allow="autoplay" style="--ratio:<?= (int)$iw ?> / <?= (int)$ih ?>"></iframe>
+      <iframe class="anim-preview" id="frame" title="Living picture preview" allow="autoplay" style="--ratio:<?= (int)$iw ?> / <?= (int)$ih ?>"></iframe>
       <?php endif ?>
       <form class="up" method="post" enctype="multipart/form-data" id="up">
         <input type="hidden" name="csrf" value="<?= $h($_SESSION['csrf']) ?>"><input type="hidden" name="action" value="upload">
         <input type="hidden" name="force" id="force" value="">
-        <label for="file"><?= $a ? 'استبدال بملف جديد' : 'رفع ملف الصورة الحية' ?> (JSON من المحرر، حتى ٣ ميغابايت)</label>
+        <label for="file"><?= $a ? 'Replace with a new file' : 'Upload the living picture file' ?> (JSON from the editor, up to 3 MB)</label>
         <input type="file" name="file" id="file" accept=".json,application/json" required>
-        <button class="btn"><?= $a ? 'استبدال' : 'رفع' ?></button>
+        <button class="btn"><?= $a ? 'Replace' : 'Upload' ?></button>
       </form>
-      <p class="hint">في المحرر استخدم صورة البطاقة نفسها: <span dir="ltr">public/img/<?= $h($img ? basename($img) : '—') ?></span> (<?= (int)$iw ?>×<?= (int)$ih ?>).<?= $a ? ' تُحفظ النسخة الحالية قبل الاستبدال.' : '' ?></p>
+      <p class="hint">In the editor, use this card's own picture: public/img/<?= $h($img ? basename($img) : '—') ?> (<?= (int)$iw ?>×<?= (int)$ih ?>).<?= $a ? ' The current version is kept before it is replaced.' : '' ?></p>
     </section>
     <?php endif ?>
   </div>
@@ -216,7 +216,7 @@ document.getElementById('up').onsubmit = async e => {
   let letter = null;
   try { letter = JSON.parse(await file.text()).letter; } catch {} // a broken file gets the server's message
   if (letter != null && plain(letter) !== plain(LETTER)) {
-    if (!confirm(`هذا الملف مصنوع لحرف «${letter}» وليس لحرف «${LETTER}». هل تريد حفظه لهذا الحرف رغم ذلك؟`)) return;
+    if (!confirm(`This file was made for the letter ${letter}, not ${LETTER}. Save it for this letter anyway?`)) return;
     document.getElementById('force').value = '1';
   }
   form.dataset.checked = '1';

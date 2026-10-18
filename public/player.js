@@ -292,17 +292,33 @@ function remember(i) { if (cur >= 0 && i !== cur) backStack.push(cur); }
 // A phone that asks to save data, is on 2G or has under 4 GB of memory loads only what is on screen
 const LEAN = !!navigator.connection?.saveData || /2g$/.test(navigator.connection?.effectiveType || '') || (navigator.deviceMemory || 8) < 4;
 
-// one letter's mp3, fetched and unscrambled with the session key; the last few are kept, so going back is instant
-// (two on a phone with little memory: each is about 1.5 MB)
+// Each song is downloaded once per device: IndexedDB keeps it as it came (scrambled) with the key it was scrambled
+// with, under its version (file date and size), so a changed file is fetched again. One entry per letter, about 12 MB
+// for all 28. No playable mp3 is ever stored. Any failure (private window, storage off or full) just means a download.
+function songStore(mode, fn) {
+  return new Promise(res => { try {
+    const rq = indexedDB.open('horofi-songs', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('songs');
+    rq.onsuccess = () => { try { const tx = rq.result.transaction('songs', mode), r = fn(tx.objectStore('songs')); tx.oncomplete = () => { rq.result.close(); res(r?.result); }; tx.onerror = tx.onabort = () => { rq.result.close(); res(null); }; } catch { rq.result.close(); res(null); } };
+    rq.onerror = () => res(null);
+  } catch { res(null); } });
+}
+// one letter's mp3, unscrambled; the last few are kept in memory too, so going back is instant
+// (two on a phone with little memory)
 const bytes = new Map(), BYTES_KEPT = (navigator.deviceMemory || 8) < 4 ? 2 : 4;
 function trackBytes(i) {
   if (!bytes.has(i)) {
     const p = (async () => {
-      const r = await fetch('audio.php?t=' + i, { headers: { 'X-Player': '1' }, cache: 'no-store' });
-      if (r.status === 403) location.reload();
-      if (!r.ok) throw 0;
-      const a = new Uint8Array(await r.arrayBuffer());
-      for (let j = 0; j < a.length; j++) a[j] ^= KEY[j % KEY.length];
+      let kept = await songStore('readonly', s => s.get(i));
+      if (kept?.v !== TRACKS[i].song) {
+        const r = await fetch('audio.php?t=' + i, { headers: { 'X-Player': '1' }, cache: 'no-store' });
+        if (r.status === 403) location.reload();
+        if (!r.ok) throw 0;
+        kept = { v: TRACKS[i].song, k: KEY, a: new Uint8Array(await r.arrayBuffer()) };
+        songStore('readwrite', s => s.put(kept, i));
+      }
+      const { a: scrambled, k } = kept, a = scrambled.slice(); // the stored bytes stay scrambled
+      for (let j = 0; j < a.length; j++) a[j] ^= k[j % k.length];
       return a;
     })();
     bytes.set(i, p);

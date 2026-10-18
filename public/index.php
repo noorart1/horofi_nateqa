@@ -96,7 +96,7 @@ if ($logged) {
     $animated = is_file(__DIR__ . '/anim/player.html') ? array_flip(db()->query('SELECT track FROM anim')->fetchAll(PDO::FETCH_COLUMN)) : [];
     foreach (tracks() as $i => $f) {
         $list[] = ['title' => track_title($f), 'glyph' => track_glyph($f), 'img' => track_image($i, 1200),
-            'thumb' => track_image($i, 240), 'done' => isset($heard[basename($f)]),
+            'thumb' => track_image($i, 240), 'song' => image_version($f), 'done' => isset($heard[basename($f)]),
             'strokes' => isset($stroked[basename($f)]), 'stars' => (int)($stars[basename($f)] ?? 0),
             'anim' => isset($animated[basename($f)]) ? 'anim_data.php?track=' . rawurlencode(basename($f)) : null];
     }

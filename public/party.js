@@ -17,6 +17,10 @@ const animate = (...a) => A.animate(...a), createTimeline = (...a) => A.createTi
   stagger = (...a) => A.stagger(...a), cleanInlineStyles = (...a) => A.cleanInlineStyles(...a);
 // animations on page elements end with cleanInlineStyles, so the CSS hover/press transforms work again
 const clean = { onComplete: cleanInlineStyles };
+// An element animated again before its last animation ended (next pressed fast): the old one is reverted first.
+// Left running, its cleanInlineStyles fires when the new one takes over and stops the new one half-way.
+const running = new WeakMap();
+const restart = (el, params) => { running.get(el)?.revert(); const a = animate(el, params); running.set(el, a); return a; };
 
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z" fill="#ffcb05" stroke="#e9a400" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 const PARTY = ['#ffcb05', '#e9a400', '#6ed2f2', '#9560a6', '#7cc242', '#ffffff']; // no letter red, no action blue
@@ -198,10 +202,10 @@ function enterGrid(list) {
   below.forEach(t => io.observe(t));
 }
 
-/** A new letter pops into the badge. */
+/** A new letter pops into the badge (it may come again before the last pop ended, so: restart, and fixed end values). */
 function swapBadge(glyph) {
-  if (calm.matches) return animate(glyph, { opacity: { from: 0 }, duration: 300, ...clean });
-  animate(glyph, { scale: { from: 0.3 }, rotate: { from: -25 }, opacity: { from: 0 }, duration: 550, ease: 'outBack(2.2)', ...clean });
+  if (calm.matches) return restart(glyph, { opacity: [0, 1], duration: 300, ...clean });
+  restart(glyph, { scale: [0.3, 1], rotate: [-25, 0], opacity: [0, 1], duration: 550, ease: 'outBack(2.2)', ...clean });
 }
 
 /** A ring ripples out of anything pressed, in its own shape (circle, pill or rounded card), growing ~18px all round. */
@@ -232,7 +236,7 @@ function strokeSparkle(x, y) {
 /** The writing pad springs open. */
 function openPad(pad) {
   if (calm.matches) return;
-  animate(pad, { scale: { from: 0.85 }, opacity: { from: 0 }, duration: 550, ease: 'outBack(1.6)', ...clean });
+  restart(pad, { scale: [0.85, 1], opacity: [0, 1], duration: 550, ease: 'outBack(1.6)', ...clean });
 }
 
 // --- while a song plays: the page comes alive (player.js drives these) ---

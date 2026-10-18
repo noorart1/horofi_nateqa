@@ -18,7 +18,7 @@
 :root[data-theme="dark"] {
   --bg: #0b2233; --card: #12324a; --ink: #e3f1fa; --muted: #9db8cc; --blue: #4fb3ee; --blue-deep: #2a86c2;
   --sun: #ffcb05; --sun-deep: #c48a00; --line: #21506f; --chip: #173e59; --danger: #ff7b6b; color-scheme: dark; }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; } /* no blue box over the picture on a phone tap */
 [hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.6;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 40px; }
@@ -1124,7 +1124,10 @@ const GUESS = [[/elephant|فيل|fil/i, 'elephant'], [/lion|أسد/i, 'lion'], [
   [/bee|fly|dragonfly/i, 'bee'], [/mouse|squirrel|rat/i, 'mouse'], [/rooster|hen/i, 'rooster'], [/horse|camel|giraffe/i, 'horse'],
   [/rabbit|kangaroo/i, 'boing'], [/turtle|snail|crab|ladybug|ants?|worm/i, 'pop'], [/fish|mushroom|flower/i, 'pop'], [/tree|leaf|sun|star|butterfly/i, 'chime']];
 const guessSound = name => (GUESS.find(([re]) => re.test(name || '')) || [, 'boing'])[1];
-const tapOf = (obj, name) => ({ s: guessSound(name), react: 'jump', ...(obj.tap || {}) });
+// only animals jump when tapped: the little animals, and regions named after one ("Elephant", "Squirrel tail"); the rest
+// (trees, mushrooms, an unnamed "Region 3") just make their sound. A reaction chosen in the editor wins.
+const ANIMAL = /\b(elephant|lion|bear|monkey|ape|bird|dove|pigeon|parrot|chick|duck|frog|cat|kitten|dog|puppy|fox|wolf|cow|sheep|lamb|goat|owl|bee|fly|flies|dragonfly|dragonflies|mouse|squirrel|rat|rooster|hen|horse|camel|giraffe|zebra|tiger|deer|rabbit|bunny|kangaroo|turtle|tortoise|snail|crab|ladybug|ant|worm|caterpillar|fish|whale|dolphin|crocodile|snake|butterfly|butterflies|penguin|hippo|rhino|panda|koala|hedgehog|bat|eagle|hawk)(s|es)?\b|فيل|أسد|دب|قرد|عصفور|طائر|بطة|ضفدع|قطة|كلب|بقرة|خروف|بومة|نحلة|فأر|سنجاب|حصان|جمل|زرافة|أرنب|سلحفاة|سمكة|فراشة/i;
+const tapOf = (obj, name) => ({ s: guessSound(name), react: (D.critters || []).includes(obj) || ANIMAL.test(name || '') ? 'jump' : 'none', ...(obj.tap || {}) });
 
 let sfx = null; // its own audio graph, so taps work even while the song plays
 function sfxCtx() { sfx ??= new AudioContext(); sfx.resume(); return sfx; }

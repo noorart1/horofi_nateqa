@@ -2,7 +2,7 @@
 :root { --sun:#ffcb05; --sun-deep:#e9a400; --blue:#0070b2; --blue-deep:#004f80; --sky:#6ed2f2; --sky-pale:#e6f5fc; --berry:#f14a26;
   --ink:#123a5c; --muted:#4f6b82; --line:#cfe6f2; --card:#fff; --err:#c2261b;
   --bg:var(--sky-pale); --accent:var(--blue); --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z' fill='%23ffcb05' stroke='%23e9a400' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E"); }
-* { box-sizing:border-box; }
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; } /* no blue box on a phone tap: pressed things show their own press */
 ::selection { background:var(--sun); color:var(--ink); }
 body { margin:0; min-height:100vh; background:var(--bg); color:var(--ink); font-family:Vazirmatn, Tahoma, sans-serif; display:flex; justify-content:center;
   padding:24px 16px; accent-color:var(--blue); scrollbar-color:#9fcde4 transparent; }
@@ -64,7 +64,7 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 /* player: a chunky toy in the cards' colours; the letter in its ring "sings" (player.js scales it with the song's loudness) */
 .sc { position:relative; margin-top:16px; padding:30px 16px 10px; border-radius:28px; /* room for the ring and the badge's highest hop */ background:var(--sun); color:var(--ink);
   box-shadow:0 10px 24px -10px #b07a0066, inset 0 -6px 0 #0000000d; }
-.sc button { font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.sc button { font:inherit; cursor:pointer; }
 .sc button:focus-visible, .sc .wave:focus-visible { outline:3px solid var(--blue); outline-offset:4px; }
 .sc svg { display:block; }
 .sc-stage { display:flex; align-items:center; justify-content:center; gap:clamp(14px, 3vw, 22px); }

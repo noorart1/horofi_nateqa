@@ -207,11 +207,11 @@ imgs[0].fetchPriority = 'high'; // the first cover is the page's largest picture
 
 TRACKS.forEach((t, i) => {
   const b = document.createElement('button');
-  b.className = 'thumb';
+  b.className = t.icon ? 'thumb icon' : 'thumb'; // the letter's round icon (it shows the letter), else a small cover
   b.ariaLabel = t.title;
   b.innerHTML = `<img loading="lazy" alt="" draggable="false"><b></b>`;
-  b.querySelector('img').src = t.thumb;
-  b.querySelector('b').textContent = t.glyph || t.title;
+  b.querySelector('img').src = t.icon || t.thumb;
+  b.querySelector('b').textContent = t.icon ? '' : t.glyph || t.title;
   b.onclick = () => i !== cur && select(i);
   $('thumbs').append(b);
 });

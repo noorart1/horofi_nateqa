@@ -57,6 +57,10 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .thumb.on { opacity:1; border-color:var(--blue); transform:translateY(-3px); box-shadow:0 5px 0 var(--blue-deep), 0 11px 14px -8px #00507a40; }
 .thumb img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
 .thumb b { position:absolute; inset:auto 0 0; background:#00395fcc; color:#fff; font-size:.95rem; padding:4px 0 2px; }
+/* round letter icons: a circle in a white ring, no name band (the icon is the letter) */
+.thumb.icon { flex-basis:72px; aspect-ratio:1; border-radius:50%; background:transparent; }
+.thumb.icon img { object-fit:contain; }
+.thumb.icon b { display:none; }
 /* player: a chunky toy in the cards' colours; the letter in its ring "sings" (player.js scales it with the song's loudness) */
 .sc { position:relative; margin-top:16px; padding:30px 16px 10px; border-radius:28px; /* room for the ring and the badge's highest hop */ background:var(--sun); color:var(--ink);
   box-shadow:0 10px 24px -10px #b07a0066, inset 0 -6px 0 #0000000d; }

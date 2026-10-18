@@ -30,6 +30,7 @@ Plain PHP 8 + PDO (MySQL/MariaDB on the server, SQLite locally), no framework, n
   - `admin_strokes.php`: admin tool to record each letter's stroke paths (404 for non-admins)
   - `admin.php`: admin panel (only for `is_admin` users; returns 404 for everyone else)
   - `img/NN.{webp,jpg,png}`: image for letter NN (falls back to `01`)
+  - `img/icon/NN.png`: letter NN's round icon, shown in the thumbnail strip (served by `img.php?f=icon/NN.png`; a letter without one shows its small cover)
 - `lib.php`: DB (MySQL if `data/config.php` exists, else SQLite `data/app.db`) + schema/migrations, `insert_ignore()`, `login_as()`, `current_user()`, track helpers
 - `data/` (outside the web root, **not in git**): `config.php` (server only: MySQL credentials), `app.db` (local only), `media/*.mp3` (96 kbps mono since 2026-10-18; playback needs only one channel), `media-stereo/` (the earlier 320 kbps stereo copies: the editor's lead/chorus split needs stereo; WAV masters are on the owner's network backup), `cache/`, `backups/`
 - CLI scripts: `import_codes.php [file.xlsx]`, `make_admin.php <user> [password|--remove]`, `backup.php`, `tools/test_anim.php` (checks `clean_anim()`), `tools/compress_media.sh` (96 kbps stereo copies of the songs in a separate folder, for the owner to listen to; never replaces the originals)

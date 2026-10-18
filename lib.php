@@ -189,6 +189,12 @@ function track_image(int $i, int $width): string
     return $f ? image_url(basename($f), $width) : '';
 }
 
+/** The round icon of track #i (img/icon/02.png for the 2nd track…), or '' when there is none. */
+function track_icon(int $i): string
+{
+    return image_url(sprintf('icon/%02d.png', $i + 1), 240);
+}
+
 /**
  * A letter's living picture as exported by the owner's editor (kind "horofi-anim"), checked before it is stored.
  * Null if it can't be stored, with the reason (in English, for the admin page) in $why. Unknown keys are kept on purpose: the engine

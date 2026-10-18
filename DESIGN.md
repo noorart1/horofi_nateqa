@@ -324,7 +324,7 @@ Tactile and chunky; they move like real buttons.
 - **Rewards:** a drawn star in the corner when the letter has been listened to; up to three small stars down the side for writing practice.
 
 ### Thumbnails
-84px picture cards (`thumb`) with a 3px white frame and Line edge, 70% opacity until hovered or selected. The selected thumbnail gets a blue frame and Blue edge and lifts 3px. Its name sits on a deep-blue band (#00395fcc).
+72px round letter icons (`thumb icon`, from `img/icon/NN.png`) in a 3px white ring, no name band; a letter without an icon falls back to an 84px picture card (`thumb`) with a 3px white frame. Both have the Line edge and 70% opacity until hovered or selected. The selected thumbnail gets a blue frame and Blue edge and lifts 3px. Its name sits on a deep-blue band (#00395fcc).
 
 ### Rewards Row, Toast, Certificate
 - **Medals:** a drawn medal (sky and purple ribbons, sun disc, white star) per 7 letters; unearned medals are greyscale at 30%.

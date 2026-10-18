@@ -3,15 +3,16 @@
 const NO_SESSION = true; // pictures are public: no session file, so many load at once without waiting on its lock
 require __DIR__ . '/../lib.php';
 
-$name = basename($_GET['f'] ?? '');
+$name = (string)($_GET['f'] ?? '');
 $width = (int)($_GET['w'] ?? 0);
 $src = ROOT . '/public/img/' . $name;
-if (!in_array($width, IMAGE_WIDTHS, true) || !preg_match('/^[\w.-]+\.(webp|jpe?g|png)$/i', $name) || !is_file($src)) {
+// a file in public/img, or in its icon/ folder (the letters' round icons); no other path
+if (!in_array($width, IMAGE_WIDTHS, true) || !preg_match('~^(icon/)?[\w-][\w.-]*\.(webp|jpe?g|png)$~iD', $name) || !is_file($src)) {
     http_response_code(404);
     exit;
 }
 
-$out = ROOT . "/data/cache/$name-$width-" . image_version($src) . '.webp'; // a replaced image gets a new cache file
+$out = ROOT . '/data/cache/' . strtr($name, '/', '_') . "-$width-" . image_version($src) . '.webp'; // a replaced image gets a new cache file
 if (!is_file($out)) {
     $im = imagecreatefromstring(file_get_contents($src));
     if (!$im) {

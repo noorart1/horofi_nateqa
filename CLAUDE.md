@@ -26,6 +26,8 @@ Plain PHP 8 + PDO (MySQL/MariaDB on the server, SQLite locally), no framework, n
   - `audio.php`: serves a track XOR-scrambled with the session key, only to a logged-in user sending `X-Player: 1`
   - `img.php`: resized WebP of `public/img/*` (widths 240 and 1200), cached in `data/cache`; defines `NO_SESSION` before `lib.php`, so it opens no session (a script that needs no session does the same)
   - `progress.php`: marks a letter as listened (server-side)
+  - `game.php`, `game.js`, `game-data.js`: «دنياي السعيدة», five silent picture games (the word and its picture, memory pairs, drag to the shadow, which picture starts with this letter, who vanished) with a map, 4 age levels that adapt, points/stars, badges, children's profiles and a parents' panel behind a sum. No sound at all (the owner has no recordings). Profiles and progress are in localStorage (per browser), not the database. `game-data.js` is the owner-editable data: words, kinds, file paths, the difficulty table, stations, badges. Linked by «هيا نلعب» under the player. Its top-level names share the global scope with `party.js` (it already has `calm`, `later`, `shuffle`…)
+  - `img/game/NN.webp` (word card), `NNp.webp` (picture), `NNc.webp` (picture cut out of its disc, for shadows and dragging): made by `php tools/game_cards.php` from the owner's `img/extra-game1/` (named by letter, `+` = picture). A letter missing any of them is left out (ر has no picture yet)
   - `certificate.php`: printable certificate, only after all 28 letters are listened to
   - `admin_strokes.php`: admin tool to record each letter's stroke paths (404 for non-admins)
   - `admin.php`: admin panel (only for `is_admin` users; returns 404 for everyone else)
@@ -33,7 +35,7 @@ Plain PHP 8 + PDO (MySQL/MariaDB on the server, SQLite locally), no framework, n
   - `img/icon/NN.png`: letter NN's round icon, shown in the thumbnail strip (served by `img.php?f=icon/NN.png`; a letter without one shows its small cover)
 - `lib.php`: DB (MySQL if `data/config.php` exists, else SQLite `data/app.db`) + schema/migrations, `insert_ignore()`, `login_as()`, `current_user()`, track helpers
 - `data/` (outside the web root, **not in git**): `config.php` (server only: MySQL credentials), `app.db` (local only), `media/*.mp3` (96 kbps mono since 2026-10-18; playback needs only one channel), `media-stereo/` (the earlier 320 kbps stereo copies: the editor's lead/chorus split needs stereo; WAV masters are on the owner's network backup), `cache/`, `backups/`
-- CLI scripts: `import_codes.php [file.xlsx]`, `make_admin.php <user> [password|--remove]`, `backup.php`, `tools/test_anim.php` (checks `clean_anim()`), `tools/compress_media.sh` (96 kbps stereo copies of the songs in a separate folder, for the owner to listen to; never replaces the originals)
+- CLI scripts: `import_codes.php [file.xlsx]`, `tools/game_cards.php` (game cards and cut-outs, see above), `make_admin.php <user> [password|--remove]`, `backup.php`, `tools/test_anim.php` (checks `clean_anim()`), `tools/compress_media.sh` (96 kbps stereo copies of the songs in a separate folder, for the owner to listen to; never replaces the originals)
 
 ## Rules
 - Design: `DESIGN.md` (tokens, rules) and `PRODUCT.md` (users: 3–5 year olds with an adult). UI changes follow them.

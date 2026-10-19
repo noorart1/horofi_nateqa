@@ -196,6 +196,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
       <button id="camera" aria-label="حركة الكاميرا في الصورة الحية" title="حركة الكاميرا في الصورة الحية" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h10.5a2 2 0 0 1 2 2v1.6l3.6-2.4a.6.6 0 0 1 .9.5v7.6a.6.6 0 0 1-.9.5l-3.6-2.4v1.6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/></svg></button>
     </div>
   </section>
+  <a class="btn game-link" href="game.php"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10a5 5 0 0 1 4.9 6l-.8 3.6a2.5 2.5 0 0 1-4.4 1L15 15.5H9l-1.7 2.1a2.5 2.5 0 0 1-4.4-1L2.1 13A5 5 0 0 1 7 7z"/><path d="M7.5 10v3M6 11.5h3"/><circle cx="15.5" cy="10.5" r=".6"/><circle cx="17.5" cy="12.5" r=".6"/></svg>هيا نلعب</a>
   <div class="letters-head"><h2>الحروف</h2><span id="progress"></span></div>
   <div class="rewards"><span id="medals" role="img"></span><a id="cert" href="certificate.php" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 5.5H4.5v1A3.5 3.5 0 0 0 8 10M17 5.5h2.5v1A3.5 3.5 0 0 1 16 10M12 13v4M8.5 20h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>شهادتك</a></div>
   <div class="letters" id="list"></div>

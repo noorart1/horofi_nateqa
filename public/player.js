@@ -203,6 +203,7 @@ TRACKS.forEach(t => {
   $('strip').append(img);
 });
 const imgs = [...$('strip').children];
+lyricsBoxes($('lyr'));
 imgs[0].fetchPriority = 'high'; // the first cover is the page's largest picture (its LCP)
 
 TRACKS.forEach((t, i) => {
@@ -633,6 +634,7 @@ function tick() {
   }
   draw();
   sing();
+  lyricsShow($('lyr'), TRACKS[cur]?.lyr, playing ? pos() : null); // the poem lights up only while the song plays
   if (playing || drag !== null) redraw();
 }
 

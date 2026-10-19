@@ -308,6 +308,7 @@ Tactile and chunky; they move like real buttons.
 ### Cards / Containers
 - **Login card** (`card-login`): white, 28px, Card edge, with the banner inset at the top.
 - **Player panel** (`panel-player`): sun-yellow, 28px, Panel shadow.
+- **Poem light:** while a song plays, the half-line of the printed poem being sung gets a soft sun tint (multiplied, so the print stays crisp) that sweeps right to left as it is sung; a plain tint under reduced motion.
 - **Cover picture:** a white-framed picture card (24px, 6px white border, Card edge) that swipes right to left (.38s), with a white pill counter in the corner.
 
 ### Letter Tiles

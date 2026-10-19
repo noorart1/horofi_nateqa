@@ -16,7 +16,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 /** Raise by one with every schema change in migrate() (a table or a column): only then do the migrations run again. */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 /**
  * MySQL when data/config.php exists (the server), else SQLite in data/app.db (local).
@@ -64,6 +64,7 @@ function migrate(PDO $db, bool $mysql): void
         'anim(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // a letter's living picture (see clean_anim)
         'anim_prev(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // the version it replaced, to undo a mistake
         'meta(k VARCHAR(191) PRIMARY KEY, v VARCHAR(191))', // the schema version
+        'lyrics(track VARCHAR(191) PRIMARY KEY, data MEDIUMTEXT, updated DATETIME)', // when each half-line of a song's poem is sung (since 2)
     ] as $t) $db->exec("CREATE TABLE IF NOT EXISTS $t$table");
     // columns added after the first release
     $cols = $mysql ? array_column($db->query('SHOW COLUMNS FROM users')->fetchAll(), 'Field')

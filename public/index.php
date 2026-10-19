@@ -93,12 +93,14 @@ if ($logged) {
     $stars = $s->fetchAll(PDO::FETCH_KEY_PAIR);
     $stroked = array_flip(db()->query('SELECT track FROM strokes')->fetchAll(PDO::FETCH_COLUMN));
     $list = [];
+    $lyrics = db()->query('SELECT track, data FROM lyrics')->fetchAll(PDO::FETCH_KEY_PAIR);
     $animated = is_file(__DIR__ . '/anim/player.html') ? array_flip(db()->query('SELECT track FROM anim')->fetchAll(PDO::FETCH_COLUMN)) : [];
     foreach (tracks() as $i => $f) {
         $list[] = ['title' => track_title($f), 'glyph' => track_glyph($f), 'img' => track_image($i, 1200),
             'thumb' => track_image($i, 240), 'icon' => track_icon($i), 'song' => image_version($f), 'done' => isset($heard[basename($f)]),
             'strokes' => isset($stroked[basename($f)]), 'stars' => (int)($stars[basename($f)] ?? 0),
-            'anim' => isset($animated[basename($f)]) ? 'anim_data.php?track=' . rawurlencode(basename($f)) : null];
+            'anim' => isset($animated[basename($f)]) ? 'anim_data.php?track=' . rawurlencode(basename($f)) : null,
+            'lyr' => isset($lyrics[basename($f)]) ? json_decode($lyrics[basename($f)]) : null];
     }
 }
 $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
@@ -170,6 +172,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
   <div class="cover" id="cover" aria-label="اسحب لتغيير الحرف">
     <div class="strip" id="strip"></div>
     <span class="counter" id="counter"></span>
+    <div class="lyr" id="lyr" aria-hidden="true"></div>
   </div>
   <div class="thumbs" id="thumbs"></div>
   <section class="sc" aria-label="مشغّل الحروف">
@@ -222,6 +225,7 @@ const ANIM = <?= json_encode($animPlayer) ?>;
 <!-- deferred, in this order, after the page is parsed; TRACKS, KEY and ANIM above are already set (party.js loads anime.js itself) -->
 <script defer src="sfx.js?v=<?= filemtime(__DIR__ . '/sfx.js') ?>"></script>
 <script defer src="party.js?v=<?= filemtime(__DIR__ . '/party.js') ?>"></script>
+<script defer src="lyrics.js?v=<?= filemtime(__DIR__ . '/lyrics.js') ?>"></script>
 <script defer src="player.js?v=<?= filemtime(__DIR__ . '/player.js') ?>"></script>
 <script defer src="guide.js?v=<?= filemtime(__DIR__ . '/guide.js') ?>"></script>
 <script defer src="writing.js?v=<?= filemtime(__DIR__ . '/writing.js') ?>"></script>

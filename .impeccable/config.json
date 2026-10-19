@@ -11,6 +11,12 @@
         ],
         "createdAt": "2026-10-15T13:33:47.171Z",
         "reason": "Claude: thumbnail <img> template in innerHTML gets its src assigned on the next line"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.34, 1.8, .64, 1)",
+        "createdAt": "2026-10-19T12:59:43.429Z",
+        "reason": "Claude: ports the existing anime.js outBack(1.8) tile entrance unchanged (playful overshoot for 3-5 year olds per PRODUCT.md); only the engine changed"
       }
     ]
   }

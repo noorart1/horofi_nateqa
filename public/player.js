@@ -385,14 +385,23 @@ function showAnim(i) {
     tell(anim, { drop: true }); tell(anim, { sleep: true });
   }
   anim = hasAnim(i) ? animFrame(i) : null; // the current one first, so it loads first
-  if (anim && !anim.classList.contains('cur')) { anim.classList.add('cur'); anim.curSince = performance.now(); anim.wanted = false; tell(anim, { sleep: !coverSeen }); giveSong(anim); }
+  if (anim && !anim.classList.contains('cur')) { anim.classList.add('cur'); anim.curSince = performance.now(); anim.wanted = false; tell(anim, { sleep: !awake() }); giveSong(anim); }
   keep.forEach(animFrame);
 }
 // the current letter's living picture is up and has its song: it plays the letter
 const live = () => !!(anim?.classList.contains('ready') && anim.dataset.i === String(cur));
 function hushAnim() { tell(anim, 'stop'); }
 // the picture stops drawing while the cover is out of view (a hidden tab stops it by itself)
-new IntersectionObserver(([e]) => { coverSeen = e.isIntersecting; tell(anim, { sleep: !coverSeen }); }).observe($('cover'));
+new IntersectionObserver(([e]) => { coverSeen = e.isIntersecting; tell(anim, { sleep: !awake() }); }).observe($('cover'));
+// ...and while the page is being scrolled: the picture shares the page's main thread, and on a phone drawing it
+// made the scroll (and the letter tiles coming in) stutter. It goes on 150 ms after the finger stops.
+let scrolling = 0;
+const awake = () => coverSeen && !scrolling;
+addEventListener('scroll', () => {
+  if (!scrolling) tell(anim, { sleep: true });
+  clearTimeout(scrolling);
+  scrolling = setTimeout(() => { scrolling = 0; tell(anim, { sleep: !awake() }); }, 150);
+}, { passive: true });
 // the camera moving between the singers is the viewer's choice (off unless turned on; remembered per browser)
 let camera = false;
 try { camera = localStorage.getItem('camera') === '1'; } catch {}
@@ -538,10 +547,18 @@ function stretch(b, r) {
   return out;
 }
 
-// the frame loop runs only while playing or dragging; anything else that changes the waveform calls redraw()
+// the frame loop runs only while playing or dragging, and only while the player is in view (on a phone, drawing it
+// off screen made scrolling the letter grid stutter); anything else that changes the waveform calls redraw()
+const playerSeen = new Set([$('cover')]); // until the observer's first report
+const playerIO = new IntersectionObserver(es => {
+  es.forEach(e => e.isIntersecting ? playerSeen.add(e.target) : playerSeen.delete(e.target));
+  redraw();
+});
+document.querySelectorAll('#cover, #thumbs, #badge, #wave').forEach(el => playerIO.observe(el));
 function redraw() { raf ||= requestAnimationFrame(tick); }
 function tick() {
   raf = 0;
+  if (!playerSeen.size) return; // the observer calls redraw() when the player comes back into view
   if (buf) {
     const t = drag ?? pos();
     $('cur').textContent = fmt(t);
@@ -554,7 +571,7 @@ function tick() {
 }
 
 // the letter sings: its badge hops and swells with the loudness of its own song
-let meter = null, level = 0, loud = 2, prevTarget = 0, lastBeat = 0;
+let meter = null, level = 0, loud = 2, prevTarget = 0, lastBeat = 0, sungThumb = null;
 const still = matchMedia('(prefers-reduced-motion: reduce)');
 const wave = new Uint8Array(512);
 // loudness of the moment being heard, on the analyser's 0..128 scale. A living picture plays the song in its own frame,
@@ -591,6 +608,14 @@ function sing() {
     : `translateY(${-level * 16}px) scale(${1 + level * 0.14}) rotate(${Math.sin(performance.now() / 260) * level * 6}deg)`;
   // the card picture breathes with the song (about 1%); left still under "reduce motion", and a living picture moves by itself
   $('cover').style.transform = level && !still.matches && !viaAnim ? `scale(${1 + level * 0.012})` : '';
+  // its icon in the strip sings along: `scale`/`rotate`, not `transform`, which the strip eases over .15s
+  const th = $('thumbs').children[cur];
+  if (sungThumb && sungThumb !== th) sungThumb.style.scale = sungThumb.style.rotate = '';
+  sungThumb = th;
+  if (th) {
+    th.style.scale = level ? 1 + level * (still.matches ? 0.04 : 0.12) : '';
+    th.style.rotate = level && !still.matches ? `${Math.sin(performance.now() / 260) * level * 8}deg` : '';
+  }
   if (level && !playing) redraw(); // let it settle after a pause
 }
 addEventListener('resize', redraw);

@@ -192,11 +192,12 @@ function enterGrid(list) {
     if (!now.length) return;
     now.forEach(t => io.unobserve(t));
     now.sort((a, b) => [...list.children].indexOf(a) - [...list.children].indexOf(b));
-    now.forEach(t => t.classList.add('entering')); // CSS transitions off, so they don't smear anime's frames
-    animate(now, {
-      y: { from: 24 }, scale: { from: 0.75 }, opacity: { from: 0, to: 1 },
-      duration: 550, ease: 'outBack(1.8)', delay: stagger(45),
-      onComplete: a => { cleanInlineStyles(a); now.forEach(t => { t.style.opacity = ''; t.classList.remove('entering'); }); },
+    // the browser's own animations, not anime.js: transform and opacity then run on the compositor, so a phone
+    // scrolling past the grid doesn't wait for them on the main thread (anime.js stuttered here)
+    now.forEach((t, k) => {
+      t.style.opacity = '';
+      t.animate([{ transform: 'translateY(24px) scale(.75)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+        { duration: 550, delay: k * 45, easing: 'cubic-bezier(.34, 1.8, .64, 1)', fill: 'backwards' });
     });
   }, { threshold: 0.35 }); // no negative margin: the last row sits at the very bottom of the page and must still trigger
   below.forEach(t => io.observe(t));
@@ -313,6 +314,6 @@ function ambient(on) {
 const later = fn => (...a) => A ? fn(...a) : loadAnime().then(() => fn(...a), () => {});
 const orSkip = fn => (...a) => { if (A) return fn(...a); loadAnime().catch(() => {}); };
 burst = later(burst); rain = later(rain); twinkle = later(twinkle); celebrateLetter = later(celebrateLetter);
-celebrateWriting = later(celebrateWriting); enterGrid = later(enterGrid); swapBadge = later(swapBadge);
+celebrateWriting = later(celebrateWriting); swapBadge = later(swapBadge);
 strokeSparkle = later(strokeSparkle); openPad = later(openPad); ambient = later(ambient);
 ripple = orSkip(ripple); singNote = orSkip(singNote);

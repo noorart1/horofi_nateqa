@@ -51,14 +51,20 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
   transform-origin:50% 90%; transition:opacity .35s ease-out, transform .38s cubic-bezier(.2,.8,.2,1); } /* slides back like the strip when a swipe is let go */
 .cover.dragging .anim-frame { transition:opacity .35s ease-out; }
 .anim-frame.shown { opacity:1; pointer-events:auto; }
-/* the poem on the card lights up as it is sung (lyrics.js): a sun tint sweeps right to left over the half-line; multiply
-   keeps the printed letters crisp. Over a living picture too (the same picture, so the same place). */
-.lyr { position:absolute; inset:0; z-index:2; pointer-events:none; transition:opacity .2s; }
+/* the poem on the card while it is sung (lyrics.js): the half-line being sung lifts out of the card bigger (a copy of
+   its strip of the picture), a sun light sweeping over it right to left (multiplied, so the print stays crisp), and the
+   other three fade. Over a living picture too (the same picture). The overlay covers the picture itself: the cards
+   (700×876) are a touch narrower than the cover (1299×1594), so they leave thin margins at the sides. */
+.lyr { position:absolute; inset:0 .97%; z-index:2; pointer-events:none; transition:opacity .2s; }
 .cover.dragging .lyr { opacity:0; }
-.lyr i { position:absolute; border-radius:12px; opacity:0; mix-blend-mode:multiply; transition:opacity .3s;
-  background:linear-gradient(to left, #ffcb05b0 calc(var(--p, 0%) - 4%), #ffcb0540 var(--p, 0%)); }
-.lyr i.on { opacity:1; }
-@media (prefers-reduced-motion:reduce) { .lyr i { background:#ffcb0580; transition:none; } }
+.lyr i { position:absolute; border-radius:10px; transition:transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s, background-color .35s; }
+.lyr i b { position:absolute; inset:0; border-radius:inherit; background:#fff var(--img) no-repeat; opacity:0; transition:opacity .25s; }
+.lyr i::before { content:''; position:absolute; inset:0; z-index:1; border-radius:inherit; mix-blend-mode:multiply; opacity:0; transition:opacity .25s;
+  background:linear-gradient(to left, #ffcb05b0 calc(var(--p, 0%) - 4%), #ffcb0530 var(--p, 0%)); }
+.lyr.singing i:not(.on) { background-color:#ffffffa6; } /* the other half-lines fade */
+.lyr i.on { z-index:3; transform:scale(1.22); box-shadow:0 0 0 3px var(--sun), 0 10px 18px -6px #00507a66; }
+.lyr i.on b, .lyr i.on::before { opacity:1; }
+@media (prefers-reduced-motion:reduce) { .lyr i, .lyr i b, .lyr i::before { transition:none; } .lyr i::before { background:#ffcb0560; } }
 .anim-frame:not(.cur) { display:none; } /* a neighbour loading ahead: not drawn until it is the current letter */
 /* thumbnail picker */
 .thumbs { display:flex; gap:10px; overflow-x:auto; padding:14px 8px 10px; scroll-snap-type:x proximity; scrollbar-width:thin; }

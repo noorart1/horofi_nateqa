@@ -38,14 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $strokes = clean_strokes($_POST['data'] ?? '');
     if ($strokes === null) {
-        $_SESSION['flash'] = 'بيانات المسار غير صالحة.';
+        $_SESSION['flash'] = 'Invalid stroke data.';
     } elseif (!$strokes) {
         $db->prepare('DELETE FROM strokes WHERE track = ?')->execute([basename($files[$t])]);
-        $_SESSION['flash'] = 'تم حذف مسار الحرف.';
+        $_SESSION['flash'] = 'The letter\'s strokes were removed.';
     } else {
         $db->prepare('REPLACE INTO strokes(track, data, updated) VALUES (?, ?, ?)') // REPLACE works in MySQL and SQLite
             ->execute([basename($files[$t]), json_encode($strokes), gmdate(NOW)]);
-        $_SESSION['flash'] = 'تم حفظ مسار الحرف.';
+        $_SESSION['flash'] = 'The letter\'s strokes were saved.';
     }
     header("Location: admin_strokes.php?t=$t");
     exit;
@@ -56,11 +56,11 @@ $saved = $db->query('SELECT track, data FROM strokes')->fetchAll(PDO::FETCH_KEY_
 $cur = isset($files[$t]) ? $files[$t] : null;
 ?>
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="en-US" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>مسارات الكتابة</title>
+<title>Writing strokes</title>
 <link rel="stylesheet" href="fonts/vazirmatn.css?v=<?= filemtime(__DIR__ . '/fonts/vazirmatn.css') ?>">
 <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
 <style>
@@ -88,29 +88,29 @@ $cur = isset($files[$t]) ? $files[$t] : null;
 </head>
 <body>
 <main class="admin">
-  <div class="bar-top"><h1>مسارات الكتابة</h1><a href="admin.php">العودة إلى لوحة الإدارة</a></div>
+  <div class="bar-top"><h1>Writing strokes</h1><a href="admin.php">Back to the admin panel</a></div>
   <?php if ($msg): ?><p class="ok" role="status"><?= $h($msg) ?></p><?php endif ?>
   <div class="cols">
     <nav class="picks">
       <?php foreach ($files as $i => $f): $has = isset($saved[basename($f)]); ?>
       <a href="?t=<?= $i ?>" class="<?= $has ? 'has' : '' ?> <?= $i === $t ? 'on' : '' ?>"<?= $i === $t ? ' aria-current="true"' : '' ?>>
-        <b><?= $h(track_glyph($f)) ?></b><?= $h(track_title($f)) ?><br><small><?= $has ? 'مسجّل' : 'غير مسجّل' ?></small>
+        <b lang="ar"><?= $h(track_glyph($f)) ?></b><span lang="ar"><?= $h(track_title($f)) ?></span><br><small><?= $has ? 'Recorded' : 'Not recorded' ?></small>
       </a>
       <?php endforeach ?>
     </nav>
     <?php if ($cur): ?>
     <section>
-      <canvas id="pad" class="pad" aria-label="ارسم ضربات الحرف بالترتيب"></canvas>
-      <p class="hint">ارسم الضربات بترتيب الكتابة: جسم الحرف أولًا ثم النقاط، كل نقطة بلمسة واحدة.</p>
-      <label class="snap"><input type="checkbox" id="snap" checked> تصحيح تلقائي: يكفي رسم تقريبي، ويُنقل الخط إلى وسط الحرف</label>
+      <canvas id="pad" class="pad" aria-label="Draw the letter's strokes in order"></canvas>
+      <p class="hint">Draw the strokes in writing order: the body of the letter first, then the dots, each dot with a single tap.</p>
+      <label class="snap"><input type="checkbox" id="snap" checked> Auto-correct: a rough drawing is enough, the line is moved to the middle of the letter</label>
       <form method="post" class="tools" id="save">
         <input type="hidden" name="csrf" value="<?= $h($_SESSION['csrf']) ?>">
         <input type="hidden" name="data" id="data">
-        <button type="button" class="btn alt" id="undo">تراجع</button>
-        <button type="button" class="btn alt" id="clear">مسح</button>
-        <button type="button" class="btn alt" id="preview">معاينة</button>
-        <button type="button" class="btn alt" id="fix" title="نقل الضربات المرسومة إلى وسط الحرف (لا يُحفظ إلا بالضغط على «حفظ»)">تصحيح</button>
-        <button class="btn">حفظ</button>
+        <button type="button" class="btn alt" id="undo">Undo</button>
+        <button type="button" class="btn alt" id="clear">Clear</button>
+        <button type="button" class="btn alt" id="preview">Preview</button>
+        <button type="button" class="btn alt" id="fix" title="Move the drawn strokes to the middle of the letter (saved only when you press Save)">Correct</button>
+        <button class="btn">Save</button>
       </form>
     </section>
     <?php endif ?>

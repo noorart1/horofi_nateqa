@@ -36,24 +36,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $files) {
     }
     $track = basename($files[$t]);
     $cues = clean_lyrics((string)($_POST['data'] ?? ''));
-    if ($cues === null) $msg = 'لم يُحفظ: البيانات غير صالحة.';
+    if ($cues === null) $msg = 'Not saved: the data is invalid.';
     elseif (!$cues) {
         $db->prepare('DELETE FROM lyrics WHERE track = ?')->execute([$track]);
-        $msg = 'حُذف توقيت هذا الحرف.';
+        $msg = 'This letter\'s timing was removed.';
     } else {
         $db->prepare('REPLACE INTO lyrics(track, data, updated) VALUES (?, ?, ?)')->execute([$track, json_encode($cues), gmdate(NOW)]);
-        $msg = 'حُفظ التوقيت (' . count($cues) . ' علامة).';
+        $msg = 'Timing saved (' . count($cues) . ' cues).';
     }
 }
 $saved = $db->query('SELECT track, data FROM lyrics')->fetchAll(PDO::FETCH_KEY_PAIR);
 $cues = $files ? json_decode($saved[basename($files[$t])] ?? '[]') : [];
 ?>
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="en-US" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>توقيت الأشعار</title>
+<title>Poem timing</title>
 <link rel="stylesheet" href="fonts/vazirmatn.css?v=<?= filemtime(__DIR__ . '/fonts/vazirmatn.css') ?>">
 <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
 <style>
@@ -72,10 +72,9 @@ $cues = $files ? json_decode($saved[basename($files[$t])] ?? '[]') : [];
 @media (max-width:800px) { .cols { grid-template-columns:1fr; } }
 .lyr-card { position:relative; aspect-ratio:1299 / 1594; border-radius:16px; overflow:hidden; background:#fff; border:1px solid var(--line); }
 .lyr-card img { width:100%; height:100%; object-fit:contain; display:block; }
-.lyr-card .lyr i { pointer-events:auto; cursor:pointer; outline:2px dashed #0070b255; outline-offset:-2px; opacity:1; background:none; }
+.lyr-card .lyr i { pointer-events:auto; cursor:pointer; outline:2px dashed #0070b255; outline-offset:-2px; }
 .lyr-card .lyr i::after { content:attr(data-n); position:absolute; top:-10px; right:-6px; width:22px; height:22px; border-radius:50%; background:var(--blue); color:#fff;
   font:700 .8rem/22px Vazirmatn, sans-serif; text-align:center; font-style:normal; }
-.lyr-card .lyr i.on { background:linear-gradient(to left, #ffcb05b0 calc(var(--p, 0%) - 4%), #ffcb0540 var(--p, 0%)); }
 .lyr-card.rec .lyr i { outline-color:#c2261b99; }
 .tools { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
 .tools button { width:auto; margin:0; padding:10px 16px; }
@@ -92,11 +91,11 @@ td button { width:auto; margin:0; padding:4px 10px; font-size:.85rem; }
 </head>
 <body>
 <main class="admin">
-  <div class="bar-top"><h1>توقيت الأشعار</h1><a href="admin.php">العودة إلى لوحة الإدارة</a></div>
+  <div class="bar-top"><h1>Poem timing</h1><a href="admin.php">Back to the admin panel</a></div>
   <?php if ($msg): ?><p class="ok" role="status"><?= $h($msg) ?></p><?php endif ?>
   <nav class="picks">
     <?php foreach ($files as $i => $f): ?>
-      <a href="?t=<?= $i ?>" class="<?= $i === $t ? 'on' : '' ?> <?= isset($saved[basename($f)]) ? 'has' : '' ?>"><b><?= $h(track_glyph($f)) ?></b><small><?= isset($saved[basename($f)]) ? 'مُوقّت' : '—' ?></small></a>
+      <a href="?t=<?= $i ?>" class="<?= $i === $t ? 'on' : '' ?> <?= isset($saved[basename($f)]) ? 'has' : '' ?>"><b lang="ar"><?= $h(track_glyph($f)) ?></b><small><?= isset($saved[basename($f)]) ? 'Timed' : '—' ?></small></a>
     <?php endforeach ?>
   </nav>
   <?php if ($files): ?>
@@ -105,22 +104,22 @@ td button { width:auto; margin:0; padding:4px 10px; font-size:.85rem; }
       <div class="lyr-card" id="card"><img src="<?= $h(track_image($t, 1200)) ?>" alt=""><div class="lyr" id="lyr"></div></div>
     </div>
     <div>
-      <p class="hint">١. شغّل الأغنية واضغط «تسجيل». ٢. المس كلّ شطر على الصورة لحظة بدء غنائه (أو الأرقام ١–٤ على لوحة المفاتيح)، و«موسيقى فقط» (أو ٠) عندما يتوقّف الغناء. ٣. شغّل من البداية للمعاينة، ثمّ احفظ.</p>
+      <p class="hint">1. Press Record (the song starts). 2. Tap each half-line on the picture the moment it starts being sung (or press 1–4), and Music only (or 0) when the singing stops. 3. Play from the start to preview, then Save.</p>
       <audio id="audio" controls preload="auto"></audio>
       <div class="tools">
-        <button id="rec" class="btn rec">تسجيل</button>
-        <button id="quiet" class="btn alt">موسيقى فقط</button>
-        <button id="restart" class="btn alt">من البداية</button>
-        <button id="early" class="btn alt" title="كلّ العلامات أبكر بعُشر ثانية">−٠٫١ ث</button>
-        <button id="late" class="btn alt" title="كلّ العلامات أبطأ بعُشر ثانية">+٠٫١ ث</button>
-        <button id="guess" class="btn alt">حدس تقريبي</button>
-        <button id="clear" class="btn alt">مسح الكلّ</button>
+        <button id="rec" class="btn rec">Record</button>
+        <button id="quiet" class="btn alt">Music only</button>
+        <button id="restart" class="btn alt">From the start</button>
+        <button id="early" class="btn alt" title="All cues a tenth of a second earlier">−0.1 s</button>
+        <button id="late" class="btn alt" title="All cues a tenth of a second later">+0.1 s</button>
+        <button id="guess" class="btn alt">Rough guess</button>
+        <button id="clear" class="btn alt">Clear all</button>
       </div>
       <form method="post" id="form">
         <input type="hidden" name="csrf" value="<?= $h($_SESSION['csrf']) ?>"><input type="hidden" name="data" id="data">
-        <div class="tools"><button class="btn">حفظ</button></div>
+        <div class="tools"><button class="btn">Save</button></div>
       </form>
-      <div class="list"><table><thead><tr><th>الوقت (ث)</th><th>الشطر</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="list"><table><thead><tr><th>Time (s)</th><th>Half-line</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
     </div>
   </div>
   <?php endif ?>
@@ -130,10 +129,11 @@ td button { width:auto; margin:0; padding:4px 10px; font-size:.85rem; }
 <script>
 const $ = id => document.getElementById(id), audio = $('audio');
 const KEY = Uint8Array.from(atob('<?= base64_encode($_SESSION['key'] ?? '') ?>'), c => c.charCodeAt(0));
-const LINE = ['١ (أعلى يمين)', '٢ (أعلى يسار)', '٣ (أسفل يمين)', '٤ (أسفل يسار)'];
+const LINE = ['1 (top right)', '2 (top left)', '3 (bottom right)', '4 (bottom left)'];
 let cues = <?= json_encode($cues) ?>, recording = false, bytes = null;
 lyricsBoxes($('lyr'));
-[...$('lyr').children].forEach((b, k) => b.dataset.n = (k + 1).toLocaleString('ar'));
+lyricsPicture($('lyr'), document.querySelector('#card img').src);
+[...$('lyr').children].forEach((b, k) => b.dataset.n = k + 1);
 
 // the song comes scrambled with this session's key, like on the player page
 fetch('audio.php?t=<?= $t ?>', { headers: { 'X-Player': '1' }, cache: 'no-store' }).then(r => r.arrayBuffer()).then(b => {
@@ -145,8 +145,8 @@ fetch('audio.php?t=<?= $t ?>', { headers: { 'X-Player': '1' }, cache: 'no-store'
 const sort = () => cues.sort((a, b) => a[0] - b[0]);
 function rows() {
   $('rows').innerHTML = cues.map(([s, l], i) => `<tr data-i="${i}"><td><input type="number" step="0.05" min="0" value="${s}" data-f="t"></td>
-    <td><select data-f="l"><option value="-1" ${l < 0 ? 'selected' : ''}>موسيقى فقط</option>${LINE.map((n, k) => `<option value="${k}" ${k === l ? 'selected' : ''}>${n}</option>`).join('')}</select></td>
-    <td><button class="btn alt" data-go>▶</button> <button class="btn alt" data-del>حذف</button></td></tr>`).join('');
+    <td><select data-f="l"><option value="-1" ${l < 0 ? 'selected' : ''}>Music only</option>${LINE.map((n, k) => `<option value="${k}" ${k === l ? 'selected' : ''}>${n}</option>`).join('')}</select></td>
+    <td><button class="btn alt" data-go>▶</button> <button class="btn alt" data-del>Delete</button></td></tr>`).join('');
 }
 $('rows').onchange = e => {
   const i = +e.target.closest('tr').dataset.i, f = e.target.dataset.f;
@@ -177,21 +177,21 @@ addEventListener('keydown', e => {
 $('rec').onclick = () => {
   recording = !recording;
   $('rec').classList.toggle('on', recording); $('card').classList.toggle('rec', recording);
-  $('rec').textContent = recording ? 'إيقاف التسجيل' : 'تسجيل';
+  $('rec').textContent = recording ? 'Stop recording' : 'Record';
   if (recording && audio.paused) audio.play();
 };
 $('restart').onclick = () => { audio.currentTime = 0; audio.play(); };
 const shift = d => { cues.forEach(c => c[0] = Math.max(0, Math.round((c[0] + d) * 100) / 100)); rows(); };
 $('early').onclick = () => shift(-0.1);
 $('late').onclick = () => shift(0.1);
-$('clear').onclick = () => { if (confirm('مسح كلّ العلامات؟')) { cues = []; rows(); } };
+$('clear').onclick = () => { if (confirm('Clear all cues?')) { cues = []; rows(); } };
 $('form').onsubmit = () => { $('data').value = JSON.stringify(cues); };
 
 // a rough first guess: the song's sung phrases from the loudness of the voice band (200–3500 Hz), split where it
 // dips, and the half-lines given in turn. The music is in the same band, so: a start to correct, never the answer.
 $('guess').onclick = async () => {
   if (!bytes) return;
-  if (cues.length && !confirm('يستبدل الحدس العلامات الحالية. متابعة؟')) return;
+  if (cues.length && !confirm('The guess replaces the current cues. Continue?')) return;
   const ac = new AudioContext(), buf = await ac.decodeAudioData(bytes.slice().buffer), sr = 8000;
   const off = new OfflineAudioContext(1, Math.ceil(buf.duration * sr), sr), src = off.createBufferSource();
   const hp = off.createBiquadFilter(), lp = off.createBiquadFilter();

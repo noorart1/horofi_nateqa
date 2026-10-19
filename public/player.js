@@ -315,6 +315,7 @@ function select(i) {
 function show(i, scroll = true) {
   cur = i;
   redraw();
+  lyricsPicture($('lyr'), TRACKS[i]?.img); // the poem's lifted half-line is cut from this card
   const name = TRACKS[i]?.title ?? '';
   if ($('title').textContent !== name) { // a new letter's name pops in (not on the first one)
     const first = !$('title').textContent;

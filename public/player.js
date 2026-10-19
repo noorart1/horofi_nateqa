@@ -219,38 +219,84 @@ TRACKS.forEach((t, i) => {
 const ensureImg = j => { if (imgs[j] && !imgs[j].src) imgs[j].src = TRACKS[j].img; };
 const stripTo = (i, px = 0) => $('strip').style.transform = `translateX(calc(${i * 100}% + ${px}px))`;
 
+// the swipe as a deck of cards: the picture being pushed away shrinks a little and tilts with the finger, the coming
+// one grows in; let go on a new letter, it lands with a small pop and a few stars twinkle on it. Only a slide under
+// "reduce motion".
+let decked = [];
+function deck(px) {
+  const p = Math.min(Math.abs(px) / $('cover').clientWidth, 1), side = Math.sign(px), next = imgs[cur + side];
+  const away = still.matches ? '' : `scale(${1 - 0.12 * p}) rotate(${side * 6 * p}deg)`;
+  imgs[cur].style.transform = away;
+  if (anim) anim.style.transform = `translateX(${px}px) ${away}`; // a living picture slides and tilts with its still one
+  decked.forEach(el => el !== imgs[cur] && el !== next && (el.style.transform = el.style.opacity = ''));
+  if (next && !still.matches) { next.style.transform = `scale(${0.88 + 0.12 * p})`; next.style.opacity = 0.55 + 0.45 * p; }
+  decked = [imgs[cur], next].filter(Boolean);
+}
+function undeck() {
+  decked.forEach(el => el.style.transform = el.style.opacity = '');
+  decked = [];
+  if (anim) anim.style.transform = '';
+}
+function landed(i) {
+  if (still.matches) return;
+  imgs[i].animate([{ transform: 'scale(.92)' }, { transform: 'scale(1.03)', offset: 0.6 }, { transform: 'none' }], { duration: 480, easing: 'ease-out' });
+  const r = $('cover').getBoundingClientRect();
+  twinkle(r.left + r.width / 2, r.top + r.height * 0.45, 5, r.width * 0.32);
+}
+
 let sw = null; // active swipe: {x, y, t, dx, locked}
-$('cover').onpointerdown = e => {
+const swDown = e => {
   if (e.button > 0) return;
   sw = { x: e.clientX, y: e.clientY, t: performance.now(), dx: 0, locked: false };
   ensureImg(cur - 1); ensureImg(cur + 1);
 };
-$('cover').onpointermove = e => {
+const swMove = e => {
   if (!sw) return;
   const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
   if (!sw.locked) {
     if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 6) return (sw = null); // vertical: let the page scroll
     if (Math.abs(dx) < 6) return;
     sw.locked = true;
-    $('cover').setPointerCapture(e.pointerId);
+    try { $('cover').setPointerCapture(e.pointerId); } catch {} // a touch that began inside a living picture stays its own
     $('cover').classList.add('dragging');
   }
   // dragging right reveals the next letter (RTL); resist past the first/last one
   const edge = (dx > 0 && cur === TRACKS.length - 1) || (dx < 0 && cur === 0);
   sw.dx = edge ? dx / 3 : dx;
   stripTo(cur, sw.dx);
+  deck(sw.dx);
 };
-$('cover').onpointerup = $('cover').onpointercancel = () => {
+const swUp = () => {
   if (!sw) return;
   const { dx, t, locked } = sw;
   sw = null;
   $('cover').classList.remove('dragging');
+  undeck();
   if (!locked) return;
   const w = $('cover').clientWidth, fast = performance.now() - t < 250 && Math.abs(dx) > 30;
   const step = Math.abs(dx) > w * 0.2 || fast ? Math.sign(dx) : 0;
   const next = Math.min(Math.max(cur + step, 0), TRACKS.length - 1);
-  next === cur ? stripTo(cur) : select(next);
+  if (next === cur) return stripTo(cur);
+  select(next);
+  landed(next);
 };
+$('cover').onpointerdown = swDown;
+$('cover').onpointermove = swMove;
+$('cover').onpointerup = $('cover').onpointercancel = swUp;
+// a living picture is a page of its own over the cover, so its touches never reach the cover: it is on this site, so
+// the page listens inside it and swipes the same way (its coordinates moved to the page's: the frame fills the cover)
+function swipeThrough(f) {
+  const w = f.contentWindow;
+  if (!w) return;
+  const page = fn => e => {
+    const c = $('cover'), r = c.getBoundingClientRect();
+    fn({ clientX: e.clientX + r.left + c.clientLeft, clientY: e.clientY + r.top + c.clientTop, pointerId: e.pointerId, button: e.button });
+  };
+  w.addEventListener('pointerdown', page(swDown));
+  w.addEventListener('pointermove', page(swMove));
+  w.addEventListener('pointerup', swUp);
+  w.addEventListener('pointercancel', swUp);
+}
 
 // change letter; keep playing if it was playing, otherwise just show it
 function select(i) {
@@ -267,12 +313,11 @@ function select(i) {
 function show(i, scroll = true) {
   cur = i;
   redraw();
-  $('title').textContent = TRACKS[i]?.title ?? '';
-  const glyph = TRACKS[i]?.glyph === 'ا' ? 'أ' : TRACKS[i]?.glyph || ''; // as printed on the card (display only: strokes key on the plain glyph)
-  if ($('badgeGlyph').textContent !== glyph) {
-    const first = !$('badgeGlyph').textContent;
-    $('badgeGlyph').textContent = glyph;
-    if (!first) swapBadge($('badgeGlyph'));
+  const name = TRACKS[i]?.title ?? '';
+  if ($('title').textContent !== name) { // a new letter's name pops in (not on the first one)
+    const first = !$('title').textContent;
+    $('title').textContent = name;
+    if (!first) swapBadge($('title'));
   }
   $('writeBtn').hidden = !TRACKS[i]?.strokes;
   showAnim(i);
@@ -355,6 +400,7 @@ function animFrame(i) {
   f.allow = 'autoplay';
   f.dataset.i = i;
   f.ready = new Promise(r => f.isReady = r);
+  f.addEventListener('load', () => swipeThrough(f));
   frames.set(i, f);
   const abs = u => encodeURIComponent(new URL(u, location.href).href); // the player resolves links against its own folder
   f.src = `${ANIM}#data=${abs(TRACKS[i].anim)}&img=${abs(TRACKS[i].img)}`; // after #: one cached player for every letter
@@ -554,7 +600,7 @@ const playerIO = new IntersectionObserver(es => {
   es.forEach(e => e.isIntersecting ? playerSeen.add(e.target) : playerSeen.delete(e.target));
   redraw();
 });
-document.querySelectorAll('#cover, #thumbs, #badge, #wave').forEach(el => playerIO.observe(el));
+document.querySelectorAll('#cover, #thumbs, #title, #wave').forEach(el => playerIO.observe(el));
 function redraw() { raf ||= requestAnimationFrame(tick); }
 function tick() {
   raf = 0;
@@ -570,7 +616,7 @@ function tick() {
   if (playing || drag !== null) redraw();
 }
 
-// the letter sings: its badge hops and swells with the loudness of its own song
+// the letter sings: its name hops and swells with the loudness of its own song
 let meter = null, level = 0, loud = 2, prevTarget = 0, lastBeat = 0, sungThumb = null;
 const still = matchMedia('(prefers-reduced-motion: reduce)');
 const wave = new Uint8Array(512);
@@ -598,14 +644,14 @@ function sing() {
     target = (rms / loud) ** 2; // squared, so beats hop and the quiet parts rest
     // a strong beat (loud and rising) sends a note out of the letter
     const now = performance.now();
-    if (target > 0.5 && target > prevTarget * 1.25 && now - lastBeat > 380) { lastBeat = now; singNote($('badge')); }
+    if (target > 0.5 && target > prevTarget * 1.25 && now - lastBeat > 380) { lastBeat = now; singNote($('title')); }
   }
   prevTarget = target;
   level += (target - level) * (target > level ? 0.5 : 0.15); // quick rise, slow fall
   if (level < 0.002) level = 0;
   // "reduce motion" (e.g. Windows' Animation effects off) gets a gentle pulse only: no hop, no tilt
-  $('badge').style.transform = !level ? '' : still.matches ? `scale(${1 + level * 0.05})`
-    : `translateY(${-level * 16}px) scale(${1 + level * 0.14}) rotate(${Math.sin(performance.now() / 260) * level * 6}deg)`;
+  $('title').style.transform = !level ? '' : still.matches ? `scale(${1 + level * 0.04})`
+    : `translateY(${-level * 10}px) scale(${1 + level * 0.1}) rotate(${Math.sin(performance.now() / 260) * level * 4}deg)`;
   // the card picture breathes with the song (about 1%); left still under "reduce motion", and a living picture moves by itself
   $('cover').style.transform = level && !still.matches && !viaAnim ? `scale(${1 + level * 0.012})` : '';
   // its icon in the strip sings along: `scale`/`rotate`, not `transform`, which the strip eases over .15s

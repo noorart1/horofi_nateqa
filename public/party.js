@@ -114,23 +114,23 @@ const glow = el => !el ? Promise.resolve()
   : animate(el, { opacity: [1, 0.35, 1], duration: 700, ease: 'inOutSine' }).then(() => {});
 
 /**
- * A letter was listened to the end for the first time: the badge cheers, confetti bursts from it,
- * a star flies from the ring to the letter's tile (or to whatever reward is on screen), and every
+ * A letter was listened to the end for the first time: its name in the player cheers, confetti bursts from it,
+ * a star flies from above it to the letter's tile (or to whatever reward is on screen), and every
  * seventh letter the new medal pops in. The payoff always happens where the child can see it.
  */
 function celebrateLetter(i, { medal = null, all = false } = {}) {
-  const badge = document.getElementById('badge'), tile = document.getElementById('list').children[i];
-  if (calm.matches) { // gentle: stars glow around the badge, the tile and medal swell softly
+  const badge = document.getElementById('title'), tile = document.getElementById('list').children[i]; // the letter's name
+  if (calm.matches) { // gentle: stars glow around the name, the tile and medal swell softly
     const [x, y] = centre(badge);
     return Promise.all([twinkle(x, y, 7, badge.offsetWidth / 2 + 26), glow(badge), pop(inView(tile) ? tile : null), pop(medal), all && rain()]).then(() => {});
   }
-  const [bx, by] = centre(badge), ring = badge.offsetWidth / 2 + 10;
+  const [bx, by] = centre(badge), ring = badge.offsetHeight / 2 + 10;
   burst(bx, by, 40);
-  const cheer = animate(badge, { scale: [1, 1.35, 1], rotate: [0, 360], duration: 900, ease: 'outElastic(1, .6)' });
+  const cheer = animate(badge, { scale: [1, 1.35, 1], duration: 900, ease: 'outElastic(1, .6)' });
 
-  // landing: the tile if it is on screen, else the new medal, else back into the badge after a loop
+  // landing: the tile if it is on screen, else the new medal, else back into the name after a loop
   const target = inView(tile) ? tile : inView(medal) ? medal : null;
-  const sx = bx, sy = by - ring; // launch from the top of the ring, so the letter stays visible
+  const sx = bx, sy = by - ring; // launch from above the name, so the name stays visible
   const [tx, ty] = target ? centre(target) : [bx, by];
   const star = bit(sx, sy, 56);
   star.innerHTML = STAR;
@@ -203,7 +203,7 @@ function enterGrid(list) {
   below.forEach(t => io.observe(t));
 }
 
-/** A new letter pops into the badge (it may come again before the last pop ended, so: restart, and fixed end values). */
+/** A new letter's name pops into the player (it may come again before the last pop ended, so: restart, and fixed end values). */
 function swapBadge(glyph) {
   if (calm.matches) return restart(glyph, { opacity: [0, 1], duration: 300, ...clean });
   restart(glyph, { scale: [0.3, 1], rotate: [-25, 0], opacity: [0, 1], duration: 550, ease: 'outBack(2.2)', ...clean });

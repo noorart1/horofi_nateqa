@@ -37,16 +37,19 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .cover { position:relative; overflow:hidden; border-radius:24px; background:#fff; border:6px solid #fff;
   box-shadow:0 8px 0 var(--line), 0 20px 30px -20px #00507a66; aspect-ratio:1299 / 1594; touch-action:pan-y; cursor:grab; user-select:none; -webkit-user-select:none; }
 .cover.dragging { cursor:grabbing; }
-.strip { display:flex; direction:rtl; height:100%; transition:transform .38s cubic-bezier(.2,.8,.2,1); will-change:transform; }
+.strip { display:flex; direction:rtl; height:100%; transition:transform .42s cubic-bezier(.3,1.2,.6,1); will-change:transform; } /* a soft spring */
 .cover.dragging .strip { transition:none; }
-.strip img { flex:0 0 100%; width:100%; height:100%; object-fit:contain; pointer-events:none; -webkit-user-drag:none; }
+.strip img { flex:0 0 100%; width:100%; height:100%; object-fit:contain; pointer-events:none; -webkit-user-drag:none;
+  transform-origin:50% 90%; transition:transform .38s cubic-bezier(.2,.8,.2,1), opacity .38s; }
+.cover.dragging .strip img { transition:none; }
 .counter { position:absolute; top:10px; left:12px; background:#ffffffe6; color:var(--ink); font-size:.85rem; font-weight:700;
   padding:3px 12px; border-radius:999px; pointer-events:none; font-variant-numeric:tabular-nums; }
-@media (prefers-reduced-motion:reduce) { .strip { transition:none; } }
+@media (prefers-reduced-motion:reduce) { .strip, .strip img { transition:none; } }
 /* living picture over the cover (same ratio as the card picture); the player fits itself inside */
 /* it fades in over the still picture once drawn: the same picture, so only the mouths and effects seem to appear */
 .anim-frame { position:absolute; inset:0; width:100%; height:100%; border:0; background:#fff; opacity:0; pointer-events:none;
-  transition:opacity .35s ease-out; }
+  transform-origin:50% 90%; transition:opacity .35s ease-out, transform .38s cubic-bezier(.2,.8,.2,1); } /* slides back like the strip when a swipe is let go */
+.cover.dragging .anim-frame { transition:opacity .35s ease-out; }
 .anim-frame.shown { opacity:1; pointer-events:auto; }
 .anim-frame:not(.cur) { display:none; } /* a neighbour loading ahead: not drawn until it is the current letter */
 /* thumbnail picker */
@@ -58,27 +61,29 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .thumb img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
 .thumb b { position:absolute; inset:auto 0 0; background:#00395fcc; color:#fff; font-size:.95rem; padding:4px 0 2px; }
 /* round letter icons: a circle in a white ring, no name band (the icon is the letter) */
-.thumb.icon { flex-basis:72px; aspect-ratio:1; border-radius:50%; background:transparent; }
+.thumb.icon { flex-basis:83px; aspect-ratio:1; border-radius:50%; background:transparent; }
 .thumb.icon img { object-fit:contain; }
 .thumb.icon b { display:none; }
 /* player: a chunky toy in the cards' colours; the letter in its ring "sings" (player.js scales it with the song's loudness) */
-.sc { position:relative; margin-top:16px; padding:30px 16px 10px; border-radius:28px; /* room for the ring and the badge's highest hop */ background:var(--sun); color:var(--ink);
+.sc { position:relative; margin-top:16px; padding:26px 16px 10px; border-radius:28px; /* room for the name's highest hop */ background:var(--sun); color:var(--ink);
   box-shadow:0 10px 24px -10px #b07a0066, inset 0 -6px 0 #0000000d; }
 .sc button { font:inherit; cursor:pointer; }
 .sc button:focus-visible, .sc .wave:focus-visible { outline:3px solid var(--blue); outline-offset:4px; }
 .sc svg { display:block; }
 .sc-stage { display:flex; align-items:center; justify-content:center; gap:clamp(14px, 3vw, 22px); }
-.badge { flex:none; margin:0 6px; width:clamp(64px, 17vw, 96px); aspect-ratio:1; border-radius:50%; background:#fff; display:grid; place-items:center;
-  box-shadow:0 0 0 7px var(--sky), 0 0 0 11px #fff, 0 12px 18px -6px #00507a55; transform-origin:50% 85%; will-change:transform; }
-.badge span { font-family:Rubik, Vazirmatn, sans-serif; font-weight:800; font-size:clamp(2rem, 6.5vw, 3.2rem); line-height:1; color:var(--berry);
-  translate:0 .04em; }
-.sc-meta { min-width:0; flex:0 1 auto; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
-.sc-title { margin:0; font-family:Rubik, Vazirmatn, sans-serif; font-weight:800; font-size:clamp(1.6rem, 6vw, 2.4rem); line-height:1.1;
-  color:var(--blue-deep); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.sc-meta { min-width:0; flex:0 1 auto; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.sc-title { margin:0; font-family:Rubik, Vazirmatn, sans-serif; font-weight:800; font-size:clamp(2rem, 8vw, 3rem); line-height:1.25;
+  color:var(--blue-deep); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; transform-origin:50% 85%; }
 .write-btn { display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:8px 18px 8px 16px; border:0; border-radius:999px;
   background:#fff; color:var(--blue); font-weight:700; font-size:1.05rem; box-shadow:0 4px 0 -1px var(--sun-deep), 0 6px 12px -6px #0004;
   transition:transform .12s, box-shadow .12s; }
 .write-btn svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+/* the child's two activities beside the song: writing practice and the games, side by side */
+.sc-acts { display:flex; justify-content:center; gap:10px; margin-top:20px; }
+.sc-acts .write-btn { flex:1 1 0; max-width:230px; justify-content:center; text-decoration:none; white-space:nowrap; font-weight:700; font-size:1.05rem; }
+/* on the pale sky ground, not the yellow panel: the sky-line edge (DESIGN.md: an edge in a deeper tone of the ground) */
+.sc-acts .write-btn { box-shadow:0 5px 0 var(--line), 0 11px 14px -8px #00507a40; }
+.sc-acts .write-btn:active { box-shadow:0 1px 0 var(--line), 0 2px 4px -2px #00507a33; }
 .write-btn:active { transform:translateY(3px); box-shadow:0 1px 0 -1px var(--sun-deep), 0 2px 6px -4px #0004; }
 .sc-controls { display:flex; justify-content:center; align-items:center; gap:clamp(14px, 5vw, 24px); margin:16px 0 10px; }
 .sc-play, .skip { border:0; border-radius:50%; display:grid; place-items:center; transition:transform .12s cubic-bezier(.2,.8,.2,1), box-shadow .12s; }
@@ -178,8 +183,6 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .btn.alt { background:var(--card); color:var(--blue); box-shadow:0 5px 0 var(--line), 0 11px 14px -8px #00507a40; }
 .btn.alt:active { box-shadow:0 1px 0 var(--line), 0 2px 4px -2px #00507a33; }
 /* «دنياي السعيدة» (game.php): the card pictures in round frames; the child's controls are big discs and pills */
-.game-link { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:22px; text-decoration:none; font-size:1.15rem; }
-.game-link svg { width:28px; height:28px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 .game-page { width:100%; max-width:760px; }
 .game-page svg, .g-award svg { fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 .game-page .btn { display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; }
@@ -267,7 +270,7 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .g-opt.right { transform:scale(1.1); transition:transform .4s cubic-bezier(.2,.8,.2,1); }
 .g-opt.wrong { animation:g-shake .4s; }
 .g-opt.hint, .g-slot.hint { box-shadow:0 0 0 6px var(--sky), 0 0 0 10px #fff, 0 12px 18px -6px #00507a55; animation:g-pulse 1.4s ease-in-out infinite; }
-/* the word card, or a letter as on the badge: what the pictures below answer */
+/* the word card, or a letter in card red: what the pictures below answer */
 .g-word { display:block; width:min(200px, 48vw); aspect-ratio:1; margin:0 auto 22px; animation:g-in .4s cubic-bezier(.2,.8,.2,1); }
 .g-letter { display:grid; place-items:center; width:min(170px, 42vw); aspect-ratio:1; margin:6px auto 30px; border-radius:50%; background:var(--card);
   color:var(--berry); font:800 clamp(4rem, 18vw, 6rem) / 1 Rubik, Vazirmatn, sans-serif; box-shadow:0 0 0 9px var(--sky), 0 0 0 14px #fff, 0 14px 22px -6px #00507a55; }

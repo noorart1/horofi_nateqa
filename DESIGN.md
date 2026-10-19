@@ -168,12 +168,6 @@ components:
     backgroundColor: "{colors.card}"
     rounded: "{rounded.field}"
     width: "84px"
-  badge-letter:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.berry}"
-    typography: "{typography.glyph}"
-    rounded: "{rounded.round}"
-    size: "clamp(64px, 17vw, 96px)"
   pill-cert:
     backgroundColor: "{colors.sun}"
     textColor: "{colors.blue-deep}"
@@ -195,7 +189,7 @@ components:
 
 The whole site is a toy that sits beside the printed «حروفي الناطقة» cards, and its world comes from the cards and the header banner. The page ground is a pale sky. White cards and tiles sit on it, the player is a sun-yellow panel, the logo blue is the colour of action, the cards' sky ring circles the current letter, and the cards' red is the letter itself. The user is a 3 to 5 year old who can't read, with an adult beside them. So everything the child touches is big, round, coloured and drawn (SVG stars, medals, a trophy, icons, never emoji or typed symbols), while the grown-up settings are small and quiet.
 
-Everything is chunky and soft. Fat pills and discs press down like plastic buttons, letter tiles lift and sink, and corners run deep. The current letter sits in a white disc inside the sky ring and "sings": it hops with the loudness of its own recording. Rewards land where the child is looking: confetti in sun, sky, purple and green bursts from the badge, and a star flies to the learned letter's tile. Right to left throughout; progress fills from the right.
+Everything is chunky and soft. Fat pills and discs press down like plastic buttons, letter tiles lift and sink, and corners run deep. The current letter's name sits big at the top of the player and "sings": it hops with the loudness of its own recording. Rewards land where the child is looking: confetti in sun, sky, purple and green bursts from the name, and a star flies to the learned letter's tile. Right to left throughout; progress fills from the right.
 
 Admin pages are an operator tool outside this world. Only their canvas colours follow the palette.
 
@@ -204,7 +198,7 @@ Admin pages are an operator tool outside this world. Only their canvas colours f
 - Rubik 800 for letters and headings; Vazirmatn for everything else.
 - Fat pills and discs with a solid tonal bottom edge plus a soft blur, pressing down on tap.
 - Pill waveform bars, blue for played, filling right to left.
-- A letter badge driven by the song's loudness; celebrations in party colours that always land on an in-view target.
+- A letter name driven by the song's loudness; celebrations in party colours that always land on an in-view target.
 - Drawn SVG rewards, never emoji.
 - Child controls large; adult controls small and grouped apart.
 
@@ -221,8 +215,8 @@ Bright primary-school colours lifted from the printed cards, on a pale sky groun
 - **Marigold** (`sun-deep`): the edge under anything sitting on or made of yellow, and the outline on stars and medals.
 
 ### Tertiary
-- **Sky Ring** (`sky`): the ring around the letter badge, waveform hover preview, a medal ribbon, confetti.
-- **Card Red** (`berry`): the letter. The badge glyph, and the child's own finger line on the writing pad (at 60%, #f14a2699).
+- **Sky Ring** (`sky`): waveform hover preview, a medal ribbon, confetti.
+- **Card Red** (`berry`): the letter. The child's own finger line on the writing pad (at 60%, #f14a2699).
 - **Ribbon Purple** (`purple`) and **Leaf Green** (`leaf`): celebration-only colours (confetti; purple is also the second medal ribbon).
 - **Go Green** (`go-green`): the writing pad's "put your finger here" dot and its arrow.
 
@@ -233,7 +227,7 @@ Bright primary-school colours lifted from the printed cards, on a pale sky groun
 - **Slate Blue** (`muted`): labels, hints, counts, tile names and numbers, inactive tabs.
 - **Honey Ink** (`honey-ink`): small text on yellow (time readouts, names on the active tile).
 - **Honey Toggle** (`honey-toggle`): icons in the grown-up toggles on translucent white over yellow. It sits close to Honey Ink and both are in use.
-- **Card White** (`card`): cards, tiles, white buttons, the badge disc. Unplayed waveform bars are white at 70% (#ffffffb3).
+- **Card White** (`card`): cards, tiles, white buttons. Unplayed waveform bars are white at 70% (#ffffffb3).
 - **Error** (`err` on `err-tint`): form errors only.
 
 ### Named Rules
@@ -251,9 +245,8 @@ Bright primary-school colours lifted from the printed cards, on a pale sky groun
 **Character:** Rubik's heavy, rounded Arabic gives letters and headings a toy-like weight; Vazirmatn carries labels and small text plainly. All h1 and h2 are Rubik 800 in deep logo blue.
 
 ### Hierarchy
-- **Glyph** (`glyph`): the single letter inside the badge, in card red.
 - **Tile glyph** (`glyph-tile`): letters on the grid tiles.
-- **Display** (`display`): the letter's name beside the badge, one line with ellipsis.
+- **Display** (`display`, at clamp(2rem, 8vw, 3rem)): the letter's name at the top of the player, one line with ellipsis.
 - **Headline** (`headline`): the certificate title.
 - **Title** (`title`, used at 1.5 to 1.7rem): page and section headings (login 1.7, writing overlay 1.6, letter grid 1.5).
 - **Message** (`message`, 1.25 to 1.3rem): writing-practice feedback and certificate lines.
@@ -265,13 +258,13 @@ Bright primary-school colours lifted from the printed cards, on a pale sky groun
 One-offs, not part of the ramp: the tile number (.7rem), the certificate name field (Rubik 800, 2rem).
 
 ### Named Rules
-**The Readable Hamza Rule.** A display face must render hamza, madda and dots unambiguously on every letter. Baloo Bhaijaan 2 was rejected because its hamza on «ألف» reads as a fatha. The badge shows alif as «أ», as printed on the card (display only; stroke data keys on the plain glyph). Check all 28 letters before adopting any new display face.
+**The Readable Hamza Rule.** A display face must render hamza, madda and dots unambiguously on every letter. Baloo Bhaijaan 2 was rejected because its hamza on «ألف» reads as a fatha. Check all 28 letters before adopting any new display face.
 
 **The Guide Font Rule.** The writing-practice guide letters (`public/guide.js`, `700 Vazirmatn`) must stay in Vazirmatn. Their stored stroke coordinates are relative to Vazirmatn's glyph shapes; changing the font misaligns every tracing path.
 
 ## Layout
 
-A single centred column on the pale sky ground: the login card is at most 440px wide, the player page 760px, the writing pad 520px. The body is padded 24px by 16px. The player page stacks a top row (user and logout pill), the banner, the swipeable cover picture, the thumbnail strip, the yellow player panel, the letter-grid heading and rewards row, then the grid (7 columns, 4 below 560px, 10px gaps). Inside the player: the badge beside the name and the writing pill, then prev | play | next (in RTL "next" sits on the left), the 56px waveform (bars 7px wide with 5px gaps; on a letter with a living picture it also moves the picture's song), times, then the grown-up row below a 2px dashed rule. Child-control sizes scale with `clamp()` against viewport width instead of breakpoints. The writing overlay fills the screen; the pad is sized to fit the viewport height minus 240px.
+A single centred column on the pale sky ground: the login card is at most 440px wide, the player page 760px, the writing pad 520px. The body is padded 24px by 16px. The player page stacks a top row (user and logout pill), the banner, the swipeable cover picture, the thumbnail strip, the yellow player panel, the letter-grid heading and rewards row, then the grid (7 columns, 4 below 560px, 10px gaps). Inside the player: the letter's name, centred, then prev | play | next (in RTL "next" sits on the left), the 56px waveform (bars 7px wide with 5px gaps; on a letter with a living picture it also moves the picture's song), times, then the grown-up row below a 2px dashed rule. Right under the player, a row of two equal white pills: writing practice and «هيا نلعب» (the games; it stands alone, centred, on a letter without writing practice). Child-control sizes scale with `clamp()` against viewport width instead of breakpoints. The writing overlay fills the screen; the pad is sized to fit the viewport height minus 240px.
 
 ## Elevation & Depth
 
@@ -285,7 +278,6 @@ Depth is physical, like a plastic toy. Anything raised or pressable has a solid 
 - **Sun edge** (`box-shadow: 0 6px 0 #e9a400, 0 10px 16px -8px #0005`): skip buttons on yellow; 4 to 5px on the active tile, certificate pill and writing pill.
 - **Pressed** (`box-shadow: 0 1px 0 <edge>, 0 2px 4px -2px #00507a33`): any pressed button or tile.
 - **Panel** (`box-shadow: 0 10px 24px -10px #b07a0066, inset 0 -6px 0 #0000000d`): the yellow player panel.
-- **Badge ring** (`box-shadow: 0 0 0 7px #6ed2f2, 0 0 0 11px #fff, 0 12px 18px -6px #00507a55`): sky ring, white outer ring, soft drop.
 
 ### Named Rules
 **The Same-Hue Edge Rule.** A raised element's solid edge is a deeper tone of the element or of the ground beneath it, and it is always paired with a soft blur. Never a black or ink-coloured hard offset, and never a bare edge without the blur.
@@ -300,7 +292,7 @@ Round everything. Child controls are full circles or full pills. Containers have
 Tactile and chunky; they move like real buttons.
 - **Primary** (`button-primary`): full-width blue pill, white label, Blue edge; presses down 4px.
 - **Alt** (`button-alt`): white pill, blue label, Line edge. In the writing overlay, primary and alt buttons stack an SVG icon (30px) over a small caption.
-- **Play** (`button-play`): a blue disc with the rounded play/pause icon at 48%. **Skip** (`button-skip`): white discs with blue chevrons on the yellow panel. **Writing pill** (`button-write`): white pill with a pencil icon.
+- **Play** (`button-play`): a blue disc with the rounded play/pause icon at 48%. **Skip** (`button-skip`): white discs with blue chevrons on the yellow panel. **Writing pill** (`button-write`): white pill with a pencil icon; the games pill beside it is the same pill with a game-pad icon.
 - **Close** (`button-close`): a 52px white disc with a drawn blue cross.
 - **Hover / Active / Focus:** lift on hover (hover-capable devices only), press down on active over .12s `cubic-bezier(.2,.8,.2,1)`. Focus is a 3px blue outline (offset 3 to 4px). No transition under reduced motion.
 - **Grown-up toggles** (`button-grown`, `button-grown-on`): 44px rounded squares, translucent white on yellow, solid white with a blue icon when on. No edge, no press motion: they are not for the child.
@@ -324,7 +316,7 @@ Tactile and chunky; they move like real buttons.
 - **Rewards:** a drawn star in the corner when the letter has been listened to; up to three small stars down the side for writing practice.
 
 ### Thumbnails
-72px round letter icons (`thumb icon`, from `img/icon/NN.png`) in a 3px white ring, no name band; a letter without an icon falls back to an 84px picture card (`thumb`) with a 3px white frame. Both have the Line edge and 70% opacity until hovered or selected. The selected thumbnail gets a blue frame and Blue edge and lifts 3px. Its name sits on a deep-blue band (#00395fcc).
+83px round letter icons (`thumb icon`, from `img/icon/NN.png`) in a 3px white ring, no name band; a letter without an icon falls back to an 84px picture card (`thumb`) with a 3px white frame. Both have the Line edge and 70% opacity until hovered or selected. The selected thumbnail gets a blue frame and Blue edge and lifts 3px. Its name sits on a deep-blue band (#00395fcc).
 
 ### Rewards Row, Toast, Certificate
 - **Medals:** a drawn medal (sky and purple ribbons, sun disc, white star) per 7 letters; unearned medals are greyscale at 30%.
@@ -332,8 +324,8 @@ Tactile and chunky; they move like real buttons.
 - **Toast** (`toast`): a blue pill sliding down from the top with a drawn star, Blue edge.
 - **Certificate page:** a white sheet in a 12px sun frame with a dashed blue inner rule, a Rubik headline, a dashed marigold underline for the name field, a drawn trophy and star, and confetti rain on open. Buttons and confetti are hidden in print.
 
-### Letter Badge (signature)
-A white disc (`badge-letter`) inside the 7px sky ring and an outer white ring, holding the current letter in card red Rubik 800. While playing, an AnalyserNode reads the song's RMS loudness. Adaptive gain (the loudest moment so far, slowly forgotten at `× 0.997` per frame) makes every song hop the same amount, squared so beats hop and quiet parts rest, with a quick rise (0.5) and slow fall (0.15). The badge rises up to 16px, scales up to 1.14 and sways up to 6deg around 50% 85%. Still under `prefers-reduced-motion`.
+### Singing Name (signature)
+The current letter's name in deep-blue Rubik 800 at the top of the player (there is no letter disc: the cover, the thumbnail and the tile show the letter). While playing, an AnalyserNode reads the song's RMS loudness. Adaptive gain (the loudest moment so far, slowly forgotten at `× 0.997` per frame) makes every song hop the same amount, squared so beats hop and quiet parts rest, with a quick rise (0.5) and slow fall (0.15). The name rises up to 10px, scales up to 1.1 and sways up to 4deg around 50% 85%; a strong beat sends a note out of it, and a new letter's name pops in. Still under `prefers-reduced-motion`.
 
 ### Waveform (signature)
 A 72px seek strip (role slider) drawn on canvas and mirrored to read right to left. Pill bars: played in blue, hover preview in sky, unplayed in 70% white. It repaints only when a bar changes colour.
@@ -343,9 +335,9 @@ A white 28px square on the pale sky overlay. The guide letter is drawn in a pale
 
 ### Celebrations (signature)
 A fixed, pointer-transparent layer above everything (`.fx`, anime.js 4.5.0) draws stars, dots and paper strips in the party palette.
-- **Letter learned:** the badge spins and swells (900ms elastic), confetti bursts from it, and a star launches from the top of the ring and flies (300ms pop, 900ms arc) to the letter's tile if it is on screen, else to the new medal, else loops back to the badge. The target then pops, and a new medal pops with its own burst. After all 28 letters, confetti rains.
+- **Letter learned:** the name swells (900ms elastic), confetti bursts from it, and a star launches from above it and flies (300ms pop, 900ms arc) to the letter's tile if it is on screen, else to the new medal, else loops back to the name. The target then pops, and a new medal pops with its own burst. After all 28 letters, confetti rains.
 - **Writing stars:** pop in one by one (elastic, 180ms stagger) with a burst.
-- **Reduced motion:** nothing flies; rewards land as a calm opacity fade (700ms) on the badge or medal, or fade the stars in.
+- **Reduced motion:** nothing flies; rewards land as a calm opacity fade (700ms) on the name or medal, or fade the stars in.
 
 ## Do's and Don'ts
 

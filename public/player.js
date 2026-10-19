@@ -238,6 +238,7 @@ function undeck() {
   if (anim) anim.style.transform = '';
 }
 function landed(i) {
+  AudioManager.play('swipe'); // a sound, not a motion: it plays under "reduce motion" too
   if (still.matches) return;
   imgs[i].animate([{ transform: 'scale(.92)' }, { transform: 'scale(1.03)', offset: 0.6 }, { transform: 'none' }], { duration: 480, easing: 'ease-out' });
   const r = $('cover').getBoundingClientRect();
@@ -463,6 +464,25 @@ $('camera').onclick = () => {
   try { localStorage.setItem('camera', camera ? '1' : '0'); } catch {}
 };
 renderCamera();
+// the site's sound effects (sfx.js): soft, short and under the songs; the grown-ups can turn them off (remembered per browser)
+let sounds = true;
+try { sounds = localStorage.getItem('sfx') !== '0'; } catch {}
+function renderSounds() {
+  AudioManager.set({ muted: !sounds, volume: 0.55 });
+  $('sfx').classList.toggle('on', sounds);
+  $('sfx').ariaPressed = String(sounds);
+}
+$('sfx').onclick = () => {
+  sounds = !sounds;
+  renderSounds();
+  try { localStorage.setItem('sfx', sounds ? '1' : '0'); } catch {}
+  AudioManager.play('pop');
+};
+renderSounds();
+// a soft pop under the child's taps (not the play button: the song is the answer to that one)
+document.addEventListener('click', e => {
+  if (e.target.closest('.skip, .write-btn, .thumb, .letter, .sc-grown button:not(#sfx), .w-btns button, #wClose')) AudioManager.play('pop');
+});
 addEventListener('message', e => {
   const f = e.origin === location.origin && [...frames.values()].find(x => x.contentWindow === e.source);
   if (!f) return;

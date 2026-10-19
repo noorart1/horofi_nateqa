@@ -1,4 +1,4 @@
-// Sound effects for «دنياي السعيدة», all synthesized here with the Web Audio API: no speech, no recordings, no files.
+// Sound effects for the site and «دنياي السعيدة», all synthesized here with the Web Audio API: no speech, no recordings, no files.
 // Bells, xylophone, soft bubbles and sparkles in a happy pentatonic, every voice with a soft start and end (no clicks).
 // Usage: AudioManager.play('correct'). The playground (admin_sounds.php) lists them all and tunes the shared settings.
 const AudioManager = (() => {
@@ -115,6 +115,7 @@ const AudioManager = (() => {
     pop: ['لمس زرّ', 'Soft Pop', 40, () => { const v = vary(0.05); note(560 * v, 0, 0.09, { to: 300 * v, sweep: 0.07, gain: 0.2 }); note(1120 * v, 0, 0.05, { gain: 0.04 }); }],
     bubble: ['اختيار صورة', 'Bubble Click', 50, () => { const v = vary(0.06); note(380 * v, 0, 0.13, { to: 980 * v, sweep: 0.08, gain: 0.18 }); note(570 * v, 0.03, 0.09, { to: 1400 * v, sweep: 0.05, gain: 0.05 }); }],
     pickup: ['رفع صورة', 'Soft Pick Up', 80, () => { note(330, 0, 0.18, { type: 'triangle', to: 620, sweep: 0.12, gain: 0.13 }); xylo(N.G5 * vary(), 0.06, 0.07); }],
+    swipe: ['تمرير الصورة', 'Card Swipe', 120, () => { hush(0, 0.3, { from: 500 * vary(0.1), to: 1700, q: 0.8, gain: 0.05 }); xylo(pick([N.E6, N.G6, N.A5]), 0.2, 0.06); }],
     move: ['تحريك صورة', 'Gentle Motion', 160, () => hush(0, 0.2, { from: 700 * vary(0.15), to: 1300, q: 1.4, gain: 0.03 })],
     snap: ['وضع صورة', 'Magnetic Snap', 60, () => { note(210, 0, 0.13, { to: 90, sweep: 0.08, gain: 0.26 }); xylo(N.C6, 0.02, 0.13); note(N.G6, 0.05, 0.18, { gain: 0.035 }); }],
     correct: ['إجابة صحيحة', 'Happy Chime', 120, () => pick([[N.C6, N.E6, N.G6], [N.G5, N.C6, N.E6], [N.E6, N.G6, N.C7]]).forEach((f, i) => bell(f, i * 0.08, 0.9, 0.11))],

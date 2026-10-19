@@ -191,6 +191,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
       <button id="shuffle" aria-label="تشغيل عشوائي" title="تشغيل عشوائي" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
       <button id="repeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="repeatIcon"/></svg></button>
       <button id="speed" class="speed" aria-label="سرعة التشغيل" title="سرعة التشغيل"></button>
+      <button id="sfx" aria-label="المؤثّرات الصوتية" title="المؤثّرات الصوتية" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.47 4.47 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z"/></svg></button>
       <button id="camera" aria-label="حركة الكاميرا في الصورة الحية" title="حركة الكاميرا في الصورة الحية" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h10.5a2 2 0 0 1 2 2v1.6l3.6-2.4a.6.6 0 0 1 .9.5v7.6a.6.6 0 0 1-.9.5l-3.6-2.4v1.6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/></svg></button>
     </div>
   </section>
@@ -219,6 +220,7 @@ const KEY = Uint8Array.from(atob('<?= base64_encode($_SESSION['key']) ?>'), c =>
 const ANIM = <?= json_encode($animPlayer) ?>;
 </script>
 <!-- deferred, in this order, after the page is parsed; TRACKS, KEY and ANIM above are already set (party.js loads anime.js itself) -->
+<script defer src="sfx.js?v=<?= filemtime(__DIR__ . '/sfx.js') ?>"></script>
 <script defer src="party.js?v=<?= filemtime(__DIR__ . '/party.js') ?>"></script>
 <script defer src="player.js?v=<?= filemtime(__DIR__ . '/player.js') ?>"></script>
 <script defer src="guide.js?v=<?= filemtime(__DIR__ . '/guide.js') ?>"></script>

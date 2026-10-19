@@ -25,6 +25,8 @@ const restart = (el, params) => { running.get(el)?.revert(); const a = animate(e
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z" fill="#ffcb05" stroke="#e9a400" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 const PARTY = ['#ffcb05', '#e9a400', '#6ed2f2', '#9560a6', '#7cc242', '#ffffff']; // no letter red, no action blue
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
+// the moment's sound, where the page has the effects (sfx.js); the games play their own around these
+const ding = name => typeof AudioManager !== 'undefined' && AudioManager.play(name);
 
 // Particles go in a layer inside whatever is on top: an open modal <dialog> renders above all of <body>.
 function layer() {
@@ -120,6 +122,9 @@ const glow = el => !el ? Promise.resolve()
  */
 function celebrateLetter(i, { medal = null, all = false } = {}) {
   const badge = document.getElementById('title'), tile = document.getElementById('list').children[i]; // the letter's name
+  ding('correct');
+  if (medal) setTimeout(() => ding('badge'), 1300);
+  if (all) setTimeout(() => ding('celebrate'), 2000);
   if (calm.matches) { // gentle: stars glow around the name, the tile and medal swell softly
     const [x, y] = centre(badge);
     return Promise.all([twinkle(x, y, 7, badge.offsetWidth / 2 + 26), glow(badge), pop(inView(tile) ? tile : null), pop(medal), all && rain()]).then(() => {});
@@ -148,6 +153,7 @@ function celebrateLetter(i, { medal = null, all = false } = {}) {
 
   return fly.then(() => {
     const land = target || badge, [cx, cy] = centre(land);
+    ding('star');
     burst(cx, cy, 14, 0.5);
     pop(land, land === badge ? 1.15 : 1.25);
     if (medal && medal !== target) pop(medal, 1.6);
@@ -163,6 +169,8 @@ function celebrateLetter(i, { medal = null, all = false } = {}) {
  */
 function celebrateWriting(starEls, pad, stars) {
   const [x, y] = centre(pad);
+  ding(stars === 3 ? 'victory' : 'correct');
+  setTimeout(() => ding('star'), 400);
   if (calm.matches) {
     twinkle(x, y, 6 + stars * 2, pad.offsetWidth / 3);
     return animate(starEls, { opacity: [0, 1], duration: 500, delay: (_, k) => k * 200 }).then(() => {});
@@ -231,11 +239,13 @@ document.addEventListener('click', e => {
 
 /** One stroke of the letter is written: a few stars sparkle at its end. */
 function strokeSparkle(x, y) {
+  ding('bubble');
   return calm.matches ? twinkle(x, y, 4, 26) : burst(x, y, 10, 0.35);
 }
 
 /** The writing pad springs open. */
 function openPad(pad) {
+  ding('appear');
   if (calm.matches) return;
   restart(pad, { scale: [0.85, 1], opacity: [0, 1], duration: 550, ease: 'outBack(1.6)', ...clean });
 }

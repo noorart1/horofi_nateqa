@@ -25,6 +25,7 @@ $v = fn($f) => filemtime(__DIR__ . "/$f");
 <main class="game-page" id="app" aria-live="polite"></main>
 <script>const GAME_FILES = new Set(<?= json_encode($have) ?>);</script>
 <script defer src="party.js?v=<?= $v('party.js') ?>"></script>
+<script defer src="sfx.js?v=<?= $v('sfx.js') ?>"></script>
 <script defer src="game-data.js?v=<?= $v('game-data.js') ?>"></script>
 <script defer src="game.js?v=<?= $v('game.js') ?>"></script>
 </body>

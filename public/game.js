@@ -1,4 +1,5 @@
-// «دنياي السعيدة»: five games on the card pictures, for 3 to 8 year olds who can't read yet: pictures lead (no sound at all),
+// «دنياي السعيدة»: five games on the card pictures, for 3 to 8 year olds who can't read yet: pictures lead (no words are spoken;
+// the sounds are synthesized effects from sfx.js),
 // the Arabic text on screen is for the adult beside them. Data and difficulty table: game-data.js. Profiles and progress
 // stay in this browser (localStorage). Mistakes never cost anything: a wrong try just shakes, and the answer glows after a few.
 const app = document.getElementById('app');
@@ -10,6 +11,8 @@ const byN = Object.fromEntries(WORDS.map(w => [w.n, w]));
 // each card's word starts with its letter (card NN = letter NN); alif as printed on the card
 const glyph = w => w.n === '01' ? 'أ' : 'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'[+w.n - 1];
 const still = matchMedia('(prefers-reduced-motion: reduce)');
+const sfx = name => AudioManager.play(name);
+const syncSound = () => AudioManager.set({ muted: me?.settings.sound === false, volume: +(me?.settings.volume ?? 0.7) });
 const esc = s => String(s).replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 
 // ---------- drawn icons (DESIGN.md: no emoji) ----------
@@ -46,10 +49,10 @@ const blank = age => ({ level: Array(5).fill(GAME_AGES[age].level), best: Array(
   points: 0, badges: {}, words: {}, animals: [], letters: 0, placed: 0, found: 0 });
 function newProfile(name, avatar, age) {
   const id = Date.now().toString(36);
-  store.profiles[id] = { id, name, avatar, age, ...blank(age), settings: { hints: true, diff: 'auto', rounds: 'auto', minutes: 15 } };
+  store.profiles[id] = { id, name, avatar, age, ...blank(age), settings: { sound: true, volume: 0.7, hints: true, diff: 'auto', rounds: 'auto', minutes: 15 } };
   return use(id);
 }
-function use(id) { me = store.profiles[id]; store.current = id; save(); started = Date.now(); return me; }
+function use(id) { me = store.profiles[id]; store.current = id; save(); started = Date.now(); syncSound(); return me; }
 
 const at = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
 
@@ -123,6 +126,7 @@ function start(si) {
     rightRow: 0, wrongRow: 0, perfect: true, used: new Set(), timers: [] };
   me.plays[si]++;
   save();
+  sfx('welcome');
   round();
 }
 const after = (fn, ms) => { const g = G, t = setTimeout(() => g === G && fn(), ms); G.timers.push(t); };
@@ -171,7 +175,8 @@ function missed(el, glow) {
   G.wrongRow++;
   G.rightRow = 0;
   if (el) { el.classList.remove('wrong'); void el.offsetWidth; el.classList.add('wrong'); }
-  if (glow && me.settings.hints && (G.roundWrongs >= GAME_LEVELS[G.L].hintAfter || G.wrongRow >= 2)) { glow(); G.hinted = true; }
+  sfx('wrong');
+  if (glow && me.settings.hints && (G.roundWrongs >= GAME_LEVELS[G.L].hintAfter || G.wrongRow >= 2)) { glow(); G.hinted = true; setTimeout(() => sfx('hint'), 350); }
   if (G.wrongRow >= 3 && me.settings.diff === 'auto') { G.L = Math.max(0, G.L - 1); G.wrongRow = 0; }
 }
 const cheer = el => burst(...at(el), 30);
@@ -183,7 +188,7 @@ function roundDone(delay = 1300) {
 }
 
 function finish() {
-  const { si } = G, pct = G.max ? G.earned / G.max : 1, stars = pct >= 0.9 ? 3 : pct >= 0.7 ? 2 : 1, points = G.earned + G.bonus;
+  const { si } = G, allBefore = me.best.every(Boolean), pct = G.max ? G.earned / G.max : 1, stars = pct >= 0.9 ? 3 : pct >= 0.7 ? 2 : 1, points = G.earned + G.bonus;
   me.best[si] = Math.max(me.best[si], stars);
   me.points += points;
   if (me.settings.diff === 'auto') me.level[si] = G.L;
@@ -200,8 +205,10 @@ function finish() {
       <div class="g-end"><button class="btn" data-act="station" data-i="${next}">${icon(GAME_STATIONS[next].id)}${GAME_STATIONS[next].name}</button>
         <button class="btn alt" data-act="map">الخريطة</button></div>
     </section>`);
-  app.querySelectorAll('.g-stars i.on').forEach((s, k) => s.style.animationDelay = k * 180 + 'ms');
+  app.querySelectorAll('.g-stars i.on').forEach((s, k) => { s.style.animationDelay = k * 180 + 'ms'; setTimeout(() => sfx('star'), 900 + k * 180); });
   rain(stars === 3 ? 120 : 60);
+  sfx('victory');
+  if (!allBefore && me.best.every(Boolean)) setTimeout(() => sfx('celebrate'), 1500); // the last of the five games
   // a three-year-old goes on by itself to the next game
   if (little) auto = setTimeout(() => start(next), 6000);
 }
@@ -223,7 +230,7 @@ function award(id) {
   pop.setAttribute('role', 'status');
   pop.innerHTML = `<span class="g-badge on">${icon(id)}</span><b>${b.name}</b>`;
   document.body.append(pop);
-  setTimeout(() => burst(...at(pop.firstChild), 40), 300);
+  setTimeout(() => { burst(...at(pop.firstChild), 40); sfx('badge'); }, 300);
   setTimeout(() => pop.remove(), 3600);
 }
 
@@ -271,6 +278,8 @@ function parents() {
       <label for="pDiff">مستوى الصعوبة</label><select id="pDiff" data-set="diff">${opt('auto', s.diff, 'تلقائي (يتغيّر مع أداء الطفل)')}${GAME_LEVELS.map((l, i) => opt(i, s.diff, l.name)).join('')}</select>
       <label for="pRounds">عدد الجولات في كلّ لعبة</label><select id="pRounds" data-set="rounds">${opt('auto', s.rounds, 'حسب المستوى')}${[3, 4, 5, 6].map(n => opt(n, s.rounds, ar(n))).join('')}</select>
       <label for="pMin">مدّة اللعب المقترحة</label><select id="pMin" data-set="minutes">${opt(0, s.minutes, 'بلا حدّ')}${[10, 15, 20, 30].map(n => opt(n, s.minutes, `${ar(n)} دقيقة`)).join('')}</select>
+      <label class="g-check"><input type="checkbox" data-set="sound" ${s.sound !== false ? 'checked' : ''}> المؤثّرات الصوتية</label>
+      <label for="pVol">مستوى الصوت</label><input id="pVol" type="range" min="0.1" max="1" step="0.1" data-set="volume" value="${s.volume ?? 0.7}">
       <label class="g-check"><input type="checkbox" data-set="hints" ${s.hints ? 'checked' : ''}> التلميحات (يضيء الجواب الصحيح بعد الأخطاء)</label>
       <h3>التقدّم</h3>
       <p class="g-hint">النجوم ${ar(me.best.reduce((a, b) => a + b, 0))} من ${ar(15)} · الأوسمة ${ar(Object.keys(me.badges).length)} · الكلمات ${ar(Object.keys(me.words).length)}</p>
@@ -285,6 +294,8 @@ function parents() {
     else if (k === 'age') { me.age = +v; me.level = Array(5).fill(GAME_AGES[me.age].level); }
     else s[k] = v;
     save();
+    syncSound();
+    if (k === 'volume' || (k === 'sound' && v)) sfx('correct'); // hear the new level
   });
 }
 
@@ -300,12 +311,14 @@ function pickOne(target, onRight = () => {}) {
   let tries = 1;
   app.querySelectorAll('.g-opt').forEach(b => b.onclick = () => {
     if (G.lock) return;
+    sfx('bubble');
     if (b.dataset.n !== target.n) {
       tries++;
       return missed(b, () => app.querySelector(`.g-opt[data-n="${target.n}"]`).classList.add('hint'));
     }
     G.lock = true;
     b.classList.add('right');
+    sfx('correct');
     cheer(b);
     onRight();
     scored(tries, target.n);
@@ -323,15 +336,17 @@ function memoryRound() {
   app.querySelectorAll('.g-opt').forEach(b => b.onclick = () => {
     if (G.lock || !b.classList.contains('back')) return;
     b.classList.remove('back');
+    sfx('flip');
     open.push(b);
     if (open.length < 2) return;
     const [x, y] = open;
     open = [];
     if (x.dataset.n === y.dataset.n) {
       x.classList.add('pair'); y.classList.add('pair');
+      sfx('match');
       scored(misses <= 1 ? 1 : misses <= 3 ? 2 : 3, x.dataset.n); // turning over wrong cards is how memory is played
       misses = 0;
-      if (++found === ws.length) { cheer(y); roundDone(1600); }
+      if (++found === ws.length) { cheer(y); setTimeout(() => sfx('correct'), 350); roundDone(1600); }
       return;
     }
     misses++;
@@ -339,6 +354,7 @@ function memoryRound() {
     G.lock = true;
     after(() => {
       x.classList.add('back'); y.classList.add('back'); G.lock = false;
+      sfx('flip');
       // after three misses in a row, a pair that is still hidden glows for a moment
       if (misses >= 3 && me.settings.hints) {
         const n = app.querySelector('.g-opt.back')?.dataset.n;
@@ -346,6 +362,7 @@ function memoryRound() {
         two.forEach(c => c.classList.add('hint'));
         after(() => two.forEach(c => c.classList.remove('hint')), 1500);
         G.hinted = true;
+        sfx('hint');
       }
     }, 900);
   });
@@ -355,7 +372,7 @@ function memoryRound() {
 function dragKit(drop) {
   let picked = null;
   const open = () => [...app.querySelectorAll('.g-slot.open')];
-  const select = p => { picked = picked === p ? null : p; app.querySelectorAll('.g-piece').forEach(x => x.classList.toggle('picked', x === picked)); };
+  const select = p => { if (p) sfx('bubble'); picked = picked === p ? null : p; app.querySelectorAll('.g-piece').forEach(x => x.classList.toggle('picked', x === picked)); };
   // the nearest open place within 30px of the finger: big targets for small hands
   const hit = (x, y) => {
     let best = null, bd = Infinity;
@@ -383,7 +400,9 @@ function dragKit(drop) {
         document.body.append(ghost);
         p.classList.add('lifted');
         select(null);
+        sfx('pickup');
       }
+      sfx('move'); // rate-limited inside: a soft breath while the picture travels
       ghost.style.transform = `translate(${dx}px, ${dy}px) scale(1.1)`;
       const s = hit(ev.clientX, ev.clientY);
       open().forEach(x => x.classList.toggle('over', x === s));
@@ -419,6 +438,8 @@ function placer(onPlaced) {
     }
     s.classList.remove('open', 'hint', 'over');
     s.classList.add('done');
+    sfx('snap');
+    if (s.dataset.img) sfx('appear'); // the vanished picture is back
     s.innerHTML = `<img src="${byN[n][s.dataset.img || 'cut']}" alt="">`;
     p.remove();
     cheer(s);
@@ -456,6 +477,7 @@ function missingRound() {
      <div class="g-slots g-shown">${shown.map(w => `<div class="g-slot pic" data-n="${w.n}" data-img="pic"><img src="${w.pic}" alt=""></div>`).join('')}</div>`);
   after(() => {
     app.querySelector('.g-timer').remove();
+    sfx('disappear');
     gone.forEach(w => {
       const s = app.querySelector(`.g-slot[data-n="${w.n}"]`);
       const img = s.firstChild;
@@ -497,7 +519,7 @@ const act = {
 };
 app.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
-  if (b && !b.disabled) act[b.dataset.act]?.(b);
+  if (b && !b.disabled) { sfx('pop'); act[b.dataset.act]?.(b); }
 });
 
 function mark(b, cls) {
@@ -506,4 +528,4 @@ function mark(b, cls) {
 function homeLink() { return `<a class="g-round" href="./" aria-label="العودة إلى الحروف">${icon('home')}</a>`; }
 
 if (WORDS.length < 12) go('<section class="g-panel"><p class="g-hint">لا توجد بطاقات كافية بعد.</p></section>');
-else me ? map() : profiles();
+else { syncSound(); me ? map() : profiles(); }

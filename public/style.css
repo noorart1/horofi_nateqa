@@ -236,6 +236,7 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .game-page select { width:100%; padding:12px 14px; border:2px solid var(--line); border-radius:16px; font:inherit; background:#fff; color:var(--ink); }
 .g-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
 .g-check input { width:22px; height:22px; }
+.game-page input[type=range] { padding:0; border:0; box-shadow:none; height:32px; accent-color:var(--blue); }
 .g-parents .btn.alt { margin-top:10px; }
 .g-sum { font-family:Rubik, Vazirmatn, sans-serif; font-weight:800; font-size:2rem; color:var(--blue-deep); text-align:center; direction:ltr; }
 /* the map: five stations along a dashed path */

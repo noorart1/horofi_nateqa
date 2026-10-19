@@ -37,7 +37,7 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 .cover { position:relative; overflow:hidden; border-radius:24px; background:#fff; border:6px solid #fff;
   box-shadow:0 8px 0 var(--line), 0 20px 30px -20px #00507a66; aspect-ratio:1299 / 1594; touch-action:pan-y; cursor:grab; user-select:none; -webkit-user-select:none; }
 .cover.dragging { cursor:grabbing; }
-.strip { display:flex; direction:rtl; height:100%; transition:transform .42s cubic-bezier(.3,1.2,.6,1); will-change:transform; } /* a soft spring */
+.strip { display:flex; direction:rtl; height:100%; transition:transform .42s cubic-bezier(.22,1,.36,1); will-change:transform; }
 .cover.dragging .strip { transition:none; }
 .strip img { flex:0 0 100%; width:100%; height:100%; object-fit:contain; pointer-events:none; -webkit-user-drag:none;
   transform-origin:50% 90%; transition:transform .38s cubic-bezier(.2,.8,.2,1), opacity .38s; }

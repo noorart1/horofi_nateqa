@@ -690,8 +690,6 @@ function sing() {
   // "reduce motion" (e.g. Windows' Animation effects off) gets a gentle pulse only: no hop, no tilt
   $('title').style.transform = !level ? '' : still.matches ? `scale(${1 + level * 0.04})`
     : `translateY(${-level * 10}px) scale(${1 + level * 0.1}) rotate(${Math.sin(performance.now() / 260) * level * 4}deg)`;
-  // the card picture breathes with the song (about 1%); left still under "reduce motion", and a living picture moves by itself
-  $('cover').style.transform = level && !still.matches && !viaAnim ? `scale(${1 + level * 0.012})` : '';
   // its icon in the strip sings along: `scale`/`rotate`, not `transform`, which the strip eases over .15s
   const th = $('thumbs').children[cur];
   if (sungThumb && sungThumb !== th) sungThumb.style.scale = sungThumb.style.rotate = '';

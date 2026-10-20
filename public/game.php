@@ -3,7 +3,8 @@
 // games). Children's profiles and progress live in the browser (localStorage), so a family shares one account.
 require __DIR__ . '/../lib.php';
 
-if (!current_user()) {
+$user = current_user();
+if (!$user) {
     header('Location: ./');
     exit;
 }
@@ -23,7 +24,7 @@ $v = fn($f) => filemtime(__DIR__ . "/$f");
 </head>
 <body>
 <main class="game-page" id="app" aria-live="polite"></main>
-<script>const GAME_FILES = new Set(<?= json_encode($have) ?>);</script>
+<script>const GAME_FILES = new Set(<?= json_encode($have) ?>), USER_NAME = <?= json_encode($user['username'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;</script>
 <script defer src="party.js?v=<?= $v('party.js') ?>"></script>
 <script defer src="sfx.js?v=<?= $v('sfx.js') ?>"></script>
 <script defer src="game-data.js?v=<?= $v('game-data.js') ?>"></script>

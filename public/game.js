@@ -82,7 +82,7 @@ function create() {
     <section class="g-panel g-form">
       <h2>طفل جديد</h2>
       <p class="g-hint">يملأ هذه الصفحة أحد الكبار.</p>
-      <label for="kidName">اسم الطفل</label><input id="kidName" maxlength="20" placeholder="بطلنا" value="${esc(draft.name || '')}">
+      <label for="kidName">اسم الطفل</label><input id="kidName" maxlength="20" placeholder="بطلنا" value="${esc(draft.name ?? USER_NAME)}">
       <h3>اختر صورته</h3>
       <div class="g-opts small">${avatars.map(n => `<button class="g-opt ${draft.avatar === n ? 'right' : ''}" data-act="avatar" data-n="${n}" aria-pressed="${draft.avatar === n}" aria-label="صورة"><img src="${byN[n].pic}" alt=""></button>`).join('')}</div>
       <h3>كم عمره؟</h3>
@@ -249,12 +249,20 @@ function profile() {
     <section class="g-panel">
       <div class="g-who"><img src="${byN[me.avatar]?.pic || WORDS[0].pic}" alt=""><div><b>${esc(me.name)}</b><span>${GAME_AGES[me.age].label}</span>
         <span>${starRow(1, 1)} ${ar(me.best.reduce((a, b) => a + b, 0))} · الأوسمة ${ar(Object.keys(me.badges).length)} من ${ar(GAME_BADGES.length)}${me.age ? ` · ${ar(me.points)} نقطة` : ''}</span></div></div>
+      <label for="kidName">الاسم</label><input id="kidName" maxlength="20" value="${esc(me.name)}">
       <h3>الألعاب</h3>
       <ul class="g-games">${GAME_STATIONS.map((s, i) => `<li>${icon(s.id)}<b>${s.name}</b>${starRow(me.best[i])}<small>${GAME_LEVELS[me.level[i]].name} · لُعبت ${ar(me.plays[i])} مرّة</small></li>`).join('')}</ul>
       <h3>الكلمات التي تدرّب عليها (${ar(words.length)})</h3>
       ${words.length ? `<div class="g-words">${words.map(([n, c]) => `<span class="g-word-mini"><img src="${byN[n].card}" alt="${byN[n].word}"><i>${ar(c)}</i></span>`).join('')}</div>` : '<p class="g-hint">لا شيء بعد.</p>'}
       <div class="g-end"><button class="btn alt" data-act="kids">تغيير الطفل</button></div>
     </section>`);
+  // the name can be changed here at any time (saved as it is typed; an empty field keeps the old name)
+  app.querySelector('#kidName').oninput = e => {
+    const v = e.target.value.trim();
+    if (!v) return;
+    me.name = v; save();
+    app.querySelectorAll('.g-title, .g-who b').forEach(el => el.textContent = v);
+  };
 }
 
 // ---------- age: the one thing a grown-up changes ----------
@@ -489,7 +497,7 @@ const act = {
   // the form is not redrawn on a choice (that would replay the pictures' entrance): only the marks move
   avatar: b => { draft.avatar = b.dataset.n; mark(b, 'right'); },
   age: b => { draft.age = +b.dataset.i; mark(b, 'on'); app.querySelector('[data-act="made"]').disabled = false; },
-  made: () => { if (draft.age === null) return; newProfile((draft.name || '').trim() || 'بطلنا', draft.avatar, draft.age); draft = null; map(); },
+  made: () => { if (draft.age === null) return; newProfile((draft.name ?? USER_NAME).trim() || 'بطلنا', draft.avatar, draft.age); draft = null; map(); },
   map, treasure, profile, ages, kids: profiles,
   station: b => start(+b.dataset.i),
   // a new age starts every game at that age's level (stars and badges stay)

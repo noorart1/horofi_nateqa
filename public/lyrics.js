@@ -31,12 +31,18 @@ function lyricsAt(cues, t) {
   while (i + 1 < cues.length && cues[i + 1][0] <= t) i++;
   if (i < 0 || cues[i][1] < 0) return null;
   const end = cues[i + 1]?.[0] ?? cues[i][0] + 4; // the last one: a few seconds
-  return { line: cues[i][1], p: Math.min(1, (t - cues[i][0]) / Math.max(0.3, end - cues[i][0])) };
+  return { cue: i, line: cues[i][1], p: Math.min(1, (t - cues[i][0]) / Math.max(0.3, end - cues[i][0])) };
 }
 
-/** Lights the half-line sung at t (null or no cues: all as printed). */
+/** Lights the half-line sung at t (null or no cues: all as printed). A half-line the singer repeats is simply cued
+ *  twice in a row: on its second cue it drops back and lifts out again, the light sweeping it from the start. */
+const lyrCalm = matchMedia('(prefers-reduced-motion: reduce)');
 function lyricsShow(el, cues, t) {
   const now = t == null ? null : lyricsAt(cues, t);
+  if (now && el.cue !== undefined && now.cue !== el.cue && now.line === el.line && !lyrCalm.matches)
+    el.children[now.line].animate([{ transform: 'scale(1.22)' }, { transform: 'scale(1)', offset: 0.35 }, { transform: 'scale(1.22)' }],
+      { duration: 520, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  el.cue = now?.cue; el.line = now?.line;
   if (el.classList.contains('singing') !== !!now) el.classList.toggle('singing', !!now);
   for (const b of el.children) {
     const on = now?.line === +b.dataset.k;

@@ -284,6 +284,10 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
   color:var(--berry); font:800 clamp(4rem, 18vw, 6rem) / 1 Rubik, Vazirmatn, sans-serif; box-shadow:0 0 0 9px var(--sky), 0 0 0 14px #fff, 0 14px 22px -6px #00507a55; }
 /* memory: face-down cards are blue discs with a white star; a shadow card is the picture in black on white */
 .g-mem { gap:12px; }
+/* the looking time before the cards turn over: a sun bar that empties, then fades away */
+.g-peek { height:12px; max-width:320px; margin:0 auto 20px; border-radius:999px; background:var(--sky-pale); overflow:hidden; transition:opacity .3s; }
+.g-peek i { display:block; height:100%; border-radius:inherit; background:var(--sun); transform-origin:right; }
+.g-peek.done { opacity:0; }
 .g-mem .g-opt { width:clamp(76px, 22vw, 130px); }
 .g-opt.back { background:var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z' fill='%23fff' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E") center / 42% no-repeat;
   box-shadow:0 5px 0 var(--blue-deep), 0 11px 14px -8px #00507a40; }

@@ -292,15 +292,38 @@ function pickOne(target, onRight = () => {}) {
 }
 
 // ---------- 2. where is my pair? ----------
+// a card turns over: it narrows to its edge, changes face and opens again (just the face change under reduced motion).
+// b.up is its side at once, so a second tap mid-turn finds it already turning.
+function turn(b, down) {
+  b.up = !down;
+  if (calm.matches) return b.classList.toggle('back', down);
+  b.animate([{ transform: 'none' }, { transform: 'perspective(500px) rotateY(90deg)' }], { duration: 120, easing: 'ease-in' }).onfinish = () => {
+    b.classList.toggle('back', down);
+    b.animate([{ transform: 'perspective(500px) rotateY(-90deg)' }, { transform: 'none' }], { duration: 140, easing: 'ease-out' });
+  };
+}
 function memoryRound() {
   const ws = fresh(WORDS, GAME_LEVELS[G.L].pairs), shadow = G.L >= 2; // from level 2: a picture and its shadow
   const cards = shuffle(ws.flatMap(w => [[w, false], [w, shadow]]));
-  frame(shadow ? 'اقلب بطاقتين: الصورة وظلّها.' : 'اقلب بطاقتين وابحث عن الصورتين المتشابهتين.',
-    `<div class="g-opts g-mem">${cards.map(([w, sh]) => `<button class="g-opt back" data-n="${w.n}" aria-label="بطاقة"><img src="${sh ? w.cut : w.pic}" class="${sh ? 'g-sil' : ''}" alt="" draggable="false"></button>`).join('')}</div>`);
+  // the cards start face up: the child looks for the level's view seconds, then they turn over one by one
+  frame('انظر جيّدًا إلى الصور وتذكّر أماكنها…',
+    `<div class="g-peek" role="progressbar" aria-label="وقت النظر"><i></i></div><div class="g-opts g-mem">${cards.map(([w, sh]) => `<button class="g-opt" data-n="${w.n}" aria-label="بطاقة"><img src="${sh ? w.cut : w.pic}" class="${sh ? 'g-sil' : ''}" alt="" draggable="false"></button>`).join('')}</div>`);
+  const all = [...app.querySelectorAll('.g-opt')];
+  G.lock = true;
+  const peek = app.querySelector('.g-peek'), view = GAME_LEVELS[G.L].view * 1000;
+  peek.firstChild.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: view, fill: 'forwards' }); // the looking time runs out
+  after(() => {
+    peek.classList.add('done');
+    all.forEach((b, i) => after(() => { turn(b, true); if (!(i % 2)) sfx('flip'); }, i * 70));
+    after(() => {
+      app.querySelector('.g-hint').textContent = shadow ? 'اقلب بطاقتين: الصورة وظلّها.' : 'اقلب بطاقتين وابحث عن الصورتين المتشابهتين.';
+      G.lock = false;
+    }, all.length * 70 + 260);
+  }, view);
   let open = [], misses = 0, found = 0;
-  app.querySelectorAll('.g-opt').forEach(b => b.onclick = () => {
-    if (G.lock || !b.classList.contains('back')) return;
-    b.classList.remove('back');
+  all.forEach(b => b.onclick = () => {
+    if (G.lock || b.up) return;
+    turn(b, false);
     sfx('flip');
     open.push(b);
     if (open.length < 2) return;
@@ -318,12 +341,12 @@ function memoryRound() {
     G.perfect = false;
     G.lock = true;
     after(() => {
-      x.classList.add('back'); y.classList.add('back'); G.lock = false;
+      turn(x, true); turn(y, true); G.lock = false;
       sfx('flip');
       // after three misses in a row, a pair that is still hidden glows for a moment
       if (misses >= 3) {
-        const n = app.querySelector('.g-opt.back')?.dataset.n;
-        const two = app.querySelectorAll(`.g-opt.back[data-n="${n}"]`);
+        const n = all.find(c => !c.up)?.dataset.n;
+        const two = all.filter(c => !c.up && c.dataset.n === n);
         two.forEach(c => c.classList.add('hint'));
         after(() => two.forEach(c => c.classList.remove('hint')), 1500);
         G.hinted = true;

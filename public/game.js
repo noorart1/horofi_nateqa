@@ -12,14 +12,15 @@ const byN = Object.fromEntries(WORDS.map(w => [w.n, w]));
 const glyph = w => w.n === '01' ? 'أ' : 'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'[+w.n - 1];
 const still = matchMedia('(prefers-reduced-motion: reduce)');
 const sfx = name => AudioManager.play(name);
-const syncSound = () => AudioManager.set({ muted: me?.settings.sound === false, volume: +(me?.settings.volume ?? 0.7) });
+// the speaker toggle on the letters page (remembered per browser) also mutes the games
+const syncSound = () => { let on = true; try { on = localStorage.getItem('sfx') !== '0'; } catch {} AudioManager.set({ muted: !on, volume: 0.7 }); };
+const MINUTES = 15; // a rest is suggested after this much play
 const esc = s => String(s).replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 
 // ---------- drawn icons (DESIGN.md: no emoji) ----------
 const I = {
   home: '<path d="M4 11l8-7 8 7"/><path d="M6.5 9.5V20h11V9.5"/><path d="M10 20v-5h4v5"/>',
   map: '<path d="M9 4L3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/>',
-  gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/>',
   chest: '<path d="M4 10h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 10a8 5.5 0 0 1 16 0"/><path d="M10.5 12.5h3v3h-3z"/>',
   play: '<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/>',
   lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
@@ -49,7 +50,7 @@ const blank = age => ({ level: Array(5).fill(GAME_AGES[age].level), best: Array(
   points: 0, badges: {}, words: {}, animals: [], letters: 0, placed: 0, found: 0 });
 function newProfile(name, avatar, age) {
   const id = Date.now().toString(36);
-  store.profiles[id] = { id, name, avatar, age, ...blank(age), settings: { sound: true, volume: 0.7, hints: true, diff: 'auto', rounds: 'auto', minutes: 15 } };
+  store.profiles[id] = { id, name, avatar, age, ...blank(age) };
   return use(id);
 }
 function use(id) { me = store.profiles[id]; store.current = id; save(); started = Date.now(); syncSound(); return me; }
@@ -94,13 +95,13 @@ function create() {
 function map() {
   leave();
   if (!me) return profiles();
-  const mins = +me.settings.minutes;
-  if (mins && !rested && Date.now() - started > mins * 60000) return rest();
+  if (!rested && Date.now() - started > MINUTES * 60000) return rest();
   const stars = me.best.reduce((a, b) => a + b, 0);
   go(`<div class="g-top">${homeLink()}
       <button class="g-me" data-act="profile" aria-label="ملفّي"><img src="${byN[me.avatar]?.pic || WORDS[0].pic}" alt=""><b>${esc(me.name)}</b></button>
       <span class="g-count">${starRow(1, 1)}${ar(stars)}</span>
-      ${topBtn('treasure', 'chest', 'كنزي')}${topBtn('gate', 'gear', 'للكبار')}
+      ${topBtn('treasure', 'chest', 'كنزي')}
+      <button class="g-me" data-act="ages" aria-label="العمر"><img src="${byN[GAME_AGES[me.age].pic]?.cut || ''}" alt=""><b>${GAME_AGES[me.age].label}</b></button>
     </div>
     <section class="g-map">
       <svg class="g-path" viewBox="0 0 100 500" preserveAspectRatio="none" aria-hidden="true"><path d="M72 40C72 120 28 80 28 140S72 210 72 260 28 320 28 360 50 420 50 460"/></svg>
@@ -112,7 +113,7 @@ function map() {
 
 function rest() {
   go(`<section class="g-panel g-center">${icon('first', 'g-big')}<h2>حان وقت الراحة!</h2>
-    <p class="g-hint">لعب ${esc(me.name)} ${ar(me.settings.minutes)} دقيقة. يمكن للكبار متابعة اللعب.</p>
+    <p class="g-hint">لعب ${esc(me.name)} ${ar(MINUTES)} دقيقة. يمكن للكبار متابعة اللعب.</p>
     <div class="g-end"><a class="btn" href="./">العودة إلى الحروف</a><button class="btn alt" data-act="morePlay">متابعة اللعب</button></div></section>`);
 }
 
@@ -120,8 +121,7 @@ function rest() {
 const ageLevel = () => GAME_AGES[me.age].level;
 function start(si) {
   leave();
-  const L = me.settings.diff === 'auto' ? me.level[si] : +me.settings.diff;
-  const r = me.settings.rounds === 'auto' ? GAME_LEVELS[L].rounds : +me.settings.rounds;
+  const L = me.level[si], r = GAME_LEVELS[L].rounds;
   G = { si, L, round: 0, rounds: GAME_STATIONS[si].id === 'memory' ? Math.ceil(r / 2) : r, earned: 0, max: 0, bonus: 0,
     rightRow: 0, wrongRow: 0, perfect: true, used: new Set(), timers: [] };
   me.plays[si]++;
@@ -165,7 +165,7 @@ function scored(tries, n) {
     if (byN[n].kind === 'animal' && !me.animals.includes(n)) me.animals.push(n);
   }
   // three right in a row: one level up for the next round, at most one above the age's level
-  if (G.rightRow >= 3 && me.settings.diff === 'auto') { G.L = Math.min(G.L + 1, ageLevel() + 1, 3); G.rightRow = 0; }
+  if (G.rightRow >= 3) { G.L = Math.min(G.L + 1, ageLevel() + 1, 3); G.rightRow = 0; }
   badges();
 }
 // a wrong try: shake, and after a few (or two in a row) the answer glows; three in a row: one level down
@@ -176,8 +176,8 @@ function missed(el, glow) {
   G.rightRow = 0;
   if (el) { el.classList.remove('wrong'); void el.offsetWidth; el.classList.add('wrong'); }
   sfx('wrong');
-  if (glow && me.settings.hints && (G.roundWrongs >= GAME_LEVELS[G.L].hintAfter || G.wrongRow >= 2)) { glow(); G.hinted = true; setTimeout(() => sfx('hint'), 350); }
-  if (G.wrongRow >= 3 && me.settings.diff === 'auto') { G.L = Math.max(0, G.L - 1); G.wrongRow = 0; }
+  if (glow && (G.roundWrongs >= GAME_LEVELS[G.L].hintAfter || G.wrongRow >= 2)) { glow(); G.hinted = true; setTimeout(() => sfx('hint'), 350); }
+  if (G.wrongRow >= 3) { G.L = Math.max(0, G.L - 1); G.wrongRow = 0; }
 }
 const cheer = el => burst(...at(el), 30);
 function roundDone(delay = 1300) {
@@ -191,7 +191,7 @@ function finish() {
   const { si } = G, allBefore = me.best.every(Boolean), pct = G.max ? G.earned / G.max : 1, stars = pct >= 0.9 ? 3 : pct >= 0.7 ? 2 : 1, points = G.earned + G.bonus;
   me.best[si] = Math.max(me.best[si], stars);
   me.points += points;
-  if (me.settings.diff === 'auto') me.level[si] = G.L;
+  me.level[si] = G.L;
   award('first');
   if (GAME_STATIONS[si].id === 'memory' && G.perfect) award('memory');
   if (me.best.every(Boolean)) award('champion');
@@ -257,46 +257,11 @@ function profile() {
     </section>`);
 }
 
-// ---------- parents ----------
-let gateAnswer = 0;
-function gate() {
+// ---------- age: the one thing a grown-up changes ----------
+function ages() {
   leave();
-  const a = 3 + (Math.random() * 7 | 0), b = 3 + (Math.random() * 7 | 0);
-  gateAnswer = a * b;
-  go(`<div class="g-top">${topBtn('map', 'map', 'الخريطة')}<h2 class="g-title">للكبار</h2></div>
-    <section class="g-panel g-form"><p>للدخول، أجب عن هذا السؤال:</p><p class="g-sum">${ar(a)} × ${ar(b)} = ؟</p>
-      <input id="gate" inputmode="numeric" autocomplete="off" aria-label="الجواب"><button class="btn" data-act="gateGo">دخول</button></section>`);
-  app.querySelector('#gate').onkeydown = e => { if (e.key === 'Enter') act.gateGo(); };
-}
-function parents() {
-  leave();
-  const s = me.settings, opt = (v, cur, label) => `<option value="${v}" ${String(v) === String(cur) ? 'selected' : ''}>${label}</option>`;
-  go(`<div class="g-top">${topBtn('map', 'map', 'الخريطة')}<h2 class="g-title">للكبار</h2></div>
-    <section class="g-panel g-form g-parents">
-      <label for="pName">اسم الطفل</label><input id="pName" data-set="name" maxlength="20" value="${esc(me.name)}">
-      <label for="pAge">العمر</label><select id="pAge" data-set="age">${GAME_AGES.map((a, i) => opt(i, me.age, a.label)).join('')}</select>
-      <label for="pDiff">مستوى الصعوبة</label><select id="pDiff" data-set="diff">${opt('auto', s.diff, 'تلقائي (يتغيّر مع أداء الطفل)')}${GAME_LEVELS.map((l, i) => opt(i, s.diff, l.name)).join('')}</select>
-      <label for="pRounds">عدد الجولات في كلّ لعبة</label><select id="pRounds" data-set="rounds">${opt('auto', s.rounds, 'حسب المستوى')}${[3, 4, 5, 6].map(n => opt(n, s.rounds, ar(n))).join('')}</select>
-      <label for="pMin">مدّة اللعب المقترحة</label><select id="pMin" data-set="minutes">${opt(0, s.minutes, 'بلا حدّ')}${[10, 15, 20, 30].map(n => opt(n, s.minutes, `${ar(n)} دقيقة`)).join('')}</select>
-      <label class="g-check"><input type="checkbox" data-set="sound" ${s.sound !== false ? 'checked' : ''}> المؤثّرات الصوتية</label>
-      <label for="pVol">مستوى الصوت</label><input id="pVol" type="range" min="0.1" max="1" step="0.1" data-set="volume" value="${s.volume ?? 0.7}">
-      <label class="g-check"><input type="checkbox" data-set="hints" ${s.hints ? 'checked' : ''}> التلميحات (يضيء الجواب الصحيح بعد الأخطاء)</label>
-      <h3>التقدّم</h3>
-      <p class="g-hint">النجوم ${ar(me.best.reduce((a, b) => a + b, 0))} من ${ar(15)} · الأوسمة ${ar(Object.keys(me.badges).length)} · الكلمات ${ar(Object.keys(me.words).length)}</p>
-      <button class="btn alt" data-act="profile">صفحة الطفل وكلماته</button>
-      <h3>إعادة الضبط</h3>
-      <button class="btn alt" data-act="reset">مسح تقدّم ${esc(me.name)}</button>
-      <button class="btn alt" data-act="remove">حذف ملفّ ${esc(me.name)}</button>
-    </section>`);
-  app.querySelectorAll('[data-set]').forEach(el => el.onchange = () => {
-    const k = el.dataset.set, v = el.type === 'checkbox' ? el.checked : el.value;
-    if (k === 'name') me.name = v.trim() || me.name;
-    else if (k === 'age') { me.age = +v; me.level = Array(5).fill(GAME_AGES[me.age].level); }
-    else s[k] = v;
-    save();
-    syncSound();
-    if (k === 'volume' || (k === 'sound' && v)) sfx('correct'); // hear the new level
-  });
+  go(`<div class="g-top">${topBtn('map', 'map', 'الخريطة')}<h2 class="g-title">كم عمره؟</h2></div>
+    <section class="g-panel"><div class="g-ages">${GAME_AGES.map((a, i) => `<button class="g-age ${me.age === i ? 'on' : ''}" data-act="setAge" data-i="${i}" aria-pressed="${me.age === i}"><img src="${byN[a.pic]?.cut || ''}" alt=""><b>${a.label}</b></button>`).join('')}</div></section>`);
 }
 
 // ---------- 1. the word and its picture ----------
@@ -356,7 +321,7 @@ function memoryRound() {
       x.classList.add('back'); y.classList.add('back'); G.lock = false;
       sfx('flip');
       // after three misses in a row, a pair that is still hidden glows for a moment
-      if (misses >= 3 && me.settings.hints) {
+      if (misses >= 3) {
         const n = app.querySelector('.g-opt.back')?.dataset.n;
         const two = app.querySelectorAll(`.g-opt.back[data-n="${n}"]`);
         two.forEach(c => c.classList.add('hint'));
@@ -502,20 +467,11 @@ const act = {
   avatar: b => { draft.avatar = b.dataset.n; mark(b, 'right'); },
   age: b => { draft.age = +b.dataset.i; mark(b, 'on'); app.querySelector('[data-act="made"]').disabled = false; },
   made: () => { if (draft.age === null) return; newProfile((draft.name || '').trim() || 'بطلنا', draft.avatar, draft.age); draft = null; map(); },
-  map, treasure, profile, gate, kids: profiles,
+  map, treasure, profile, ages, kids: profiles,
   station: b => start(+b.dataset.i),
-  gateGo: () => {
-    const v = app.querySelector('#gate').value.replace(/[٠-٩۰-۹]/g, d => d.charCodeAt(0) & 15); // Arabic or Persian digits
-    +v === gateAnswer ? parents() : gate();
-  },
+  // a new age starts every game at that age's level (stars and badges stay)
+  setAge: b => { if (me.age !== +b.dataset.i) { me.age = +b.dataset.i; me.level = Array(5).fill(ageLevel()); save(); } map(); },
   morePlay: () => { rested = true; map(); },
-  reset: () => { if (confirm(`مسح كلّ تقدّم ${me.name}؟`)) { Object.assign(me, blank(me.age)); save(); parents(); } },
-  remove: () => {
-    if (!confirm(`حذف ملفّ ${me.name}؟`)) return;
-    delete store.profiles[me.id];
-    store.current = null; me = null; save();
-    profiles();
-  },
 };
 app.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');

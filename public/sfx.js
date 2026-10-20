@@ -147,12 +147,17 @@ const AudioManager = (() => {
       [N.C5, N.G5, N.C6, N.E6, N.G6].forEach((f, i) => bell(f, i * 0.1, 0.9, 0.07));
       note(420, 0.55, 0.14, { to: 1000, sweep: 0.09, gain: 0.12 });
     }],
-    celebrate: ['نهاية كلّ الألعاب', 'Celebration Melody', 1500, () => {
+    celebrate: ['نهاية كلّ الألعاب', 'Celebration Melody', 1500, () => pick([() => {
       [N.C6, N.D6, N.E6, N.G6, N.E6, N.G6, N.A6, N.C7].forEach((f, i) => xylo(f, i * 0.12, 0.11));
       [[N.C4, 0], [N.G4, 0.48], [N.C5, 0.96]].forEach(([f, t]) => note(f, t, 0.6, { type: 'triangle', gain: 0.08, lp: 1200 }));
       [N.C6, N.E6, N.G6, N.C7].forEach(f => bell(f, 1, 1.6, 0.05));
       for (let i = 0; i < 10; i++) bell(pick(SPARKS), 1.1 + i * 0.08, 0.5, 0.025);
-    }],
+    }, () => { // a slower sung tune, ending on a soft C chord
+      [N.C5, N.E5, N.G5, N.A5, N.C6, N.A5, 987.77, N.D6, N.C6].forEach((f, i) => note(f, i * 0.26, 0.38, { type: 'triangle', gain: 0.085 }));
+      note(N.C5, 2.35, 0.48, { gain: 0.042 });
+      note(N.G5, 2.35, 0.48, { gain: 0.04 });
+      note(N.C6, 2.35, 0.55, { gain: 0.038 });
+    }])()],
   };
 
   return {

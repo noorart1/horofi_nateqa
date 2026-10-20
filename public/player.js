@@ -238,10 +238,18 @@ function undeck() {
   decked = [];
   if (anim) anim.style.transform = '';
 }
-function landed(i) {
+// from: where the new picture was when the finger let go (px from its place)
+function landed(i, from) {
   AudioManager.play('swipe'); // a sound, not a motion: it plays under "reduce motion" too
   if (still.matches) return;
-  imgs[i].animate([{ transform: 'scale(.92)' }, { transform: 'scale(1.03)', offset: 0.6 }, { transform: 'none' }], { duration: 480, easing: 'ease-out' });
+  const pop = [{ scale: 0.92 }, { scale: 1.03, offset: 0.6 }, { scale: 1 }], popT = { duration: 480, easing: 'ease-out' };
+  imgs[i].animate(pop, popT);
+  // a living picture already drawn sits over its still one: it comes in with the strip and pops too, or it would stand
+  // still in place while its card slid and popped beneath it
+  if (anim?.dataset.i === String(i)) {
+    anim.animate([{ translate: `${from}px 0` }, { translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)' }); // the strip's slide
+    anim.animate(pop, popT);
+  }
   const r = $('cover').getBoundingClientRect();
   twinkle(r.left + r.width / 2, r.top + r.height * 0.45, 5, r.width * 0.32);
 }
@@ -279,20 +287,27 @@ const swUp = () => {
   const step = Math.abs(dx) > w * 0.2 || fast ? Math.sign(dx) : 0;
   const next = Math.min(Math.max(cur + step, 0), TRACKS.length - 1);
   if (next === cur) return stripTo(cur);
+  const from = (cur - next) * w + dx; // the strip at (cur, dx) puts picture j at (cur - j) widths from its place
   select(next);
-  landed(next);
+  landed(next, from);
 };
 $('cover').onpointerdown = swDown;
 $('cover').onpointermove = swMove;
 $('cover').onpointerup = $('cover').onpointercancel = swUp;
 // a living picture is a page of its own over the cover, so its touches never reach the cover: it is on this site, so
-// the page listens inside it and swipes the same way (its coordinates moved to the page's: the frame fills the cover)
+// the page listens inside it and swipes the same way (its coordinates moved to the page's: the frame fills the cover).
+// Mid-swipe the frame itself is moved, shrunk and tilted (deck), so its points go through that transform first: without
+// it the finger's distance was measured against a frame running after it, and the picture lagged and stuck.
 function swipeThrough(f) {
   const w = f.contentWindow;
   if (!w) return;
+  // a sideways touch anywhere in the frame is the page's swipe, not the frame's own pan (which cancelled the touch)
+  w.document.documentElement.style.touchAction = 'pan-y';
   const page = fn => e => {
-    const c = $('cover'), r = c.getBoundingClientRect();
-    fn({ clientX: e.clientX + r.left + c.clientLeft, clientY: e.clientY + r.top + c.clientTop, pointerId: e.pointerId, button: e.button });
+    const c = $('cover'), r = c.getBoundingClientRect(), ox = f.offsetWidth * 0.5, oy = f.offsetHeight * 0.9; // transform-origin
+    const p = new DOMMatrix().translate(ox, oy).multiply(new DOMMatrix(getComputedStyle(f).transform)).translate(-ox, -oy)
+      .transformPoint({ x: e.clientX, y: e.clientY });
+    fn({ clientX: p.x + r.left + c.clientLeft, clientY: p.y + r.top + c.clientTop, pointerId: e.pointerId, button: e.button });
   };
   w.addEventListener('pointerdown', page(swDown));
   w.addEventListener('pointermove', page(swMove));

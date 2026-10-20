@@ -121,6 +121,8 @@ $('wave').onkeydown = e => {
   else if (e.key === 'ArrowRight') seek(pos() - 5);
   else if (e.key === ' ') { e.preventDefault(); playing ? pause() : play(); }
 };
+// the phone went to another app or the screen locked: the song stops (the child presses play again)
+document.addEventListener('visibilitychange', () => { if (document.hidden && playing) pause(); });
 
 // --- playback ---
 function stopSrc() {

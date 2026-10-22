@@ -114,7 +114,7 @@ function map() {
 function rest() {
   go(`<section class="g-panel g-center">${icon('first', 'g-big')}<h2>حان وقت الراحة!</h2>
     <p class="g-hint">لعب ${esc(me.name)} ${ar(MINUTES)} دقيقة. يمكن للكبار متابعة اللعب.</p>
-    <div class="g-end"><a class="btn" href="./">العودة إلى الحروف</a><button class="btn alt" data-act="morePlay">متابعة اللعب</button></div></section>`);
+    <div class="g-end"><a class="btn" href="./?letters">العودة إلى الحروف</a><button class="btn alt" data-act="morePlay">متابعة اللعب</button></div></section>`);
 }
 
 // ---------- the game frame, scoring and difficulty ----------
@@ -512,7 +512,7 @@ app.addEventListener('click', e => {
 function mark(b, cls) {
   b.parentNode.querySelectorAll('button').forEach(x => { x.classList.toggle(cls, x === b); x.setAttribute('aria-pressed', x === b); });
 }
-function homeLink() { return `<a class="g-round" href="./" aria-label="العودة إلى الحروف">${icon('home')}</a>`; }
+function homeLink() { return `<a class="g-round" href="./?letters" aria-label="العودة إلى الحروف">${icon('home')}</a>`; }
 
 if (WORDS.length < 12) go('<section class="g-panel"><p class="g-hint">لا توجد بطاقات كافية بعد.</p></section>');
 else { syncSound(); me ? map() : profiles(); }

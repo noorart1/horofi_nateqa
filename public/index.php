@@ -84,7 +84,8 @@ if (!$me && !empty($_SESSION['uid'])) { // logged in on another device, or the a
     $err = 'انتهت جلستك لأنه تم تسجيل الدخول إلى حسابك من جهاز آخر.';
 }
 $logged = (bool)$me;
-if ($logged) {
+$home = $logged && !isset($_GET['letters']); // after login: choose the letters or the games
+if ($logged && !$home) {
     $s = db()->prepare('SELECT track FROM progress WHERE user_id = ?');
     $s->execute([$me['id']]);
     $heard = array_flip($s->fetchAll(PDO::FETCH_COLUMN));
@@ -124,7 +125,7 @@ $banner = image_url('headerontop.jpg', 1200);
 <?php if (!$logged): ?>
 <main class="card">
   <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450" fetchpriority="high"><?php endif ?>
-  <h1>حروفي الناطقة</h1>
+  <h1>مرحبا في حروفي الناطقة</h1>
   <div class="tabs">
     <button type="button" data-tab="login" class="<?= $tab === 'login' ? 'on' : '' ?>">تسجيل الدخول</button>
     <button type="button" data-tab="register" class="<?= $tab === 'register' ? 'on' : '' ?>">حساب جديد</button>
@@ -162,6 +163,18 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
   document.querySelector('.err')?.remove();
 });
 </script>
+<?php elseif ($home): ?>
+<main class="player-page">
+  <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450" fetchpriority="high"><?php endif ?>
+  <div class="top">
+    <span><?= $h($me['username']) ?><?php if ($me['is_admin']): ?> · <a href="admin.php">لوحة الإدارة</a><?php endif ?></span>
+    <form method="post"><input type="hidden" name="action" value="logout"><button>تسجيل الخروج</button></form>
+  </div>
+  <nav class="choose">
+    <a href="?letters"><img src="<?= $h(image_url('main.jpg', 1200)) ?>" alt="مدرسة الحروف" width="776" height="691"></a>
+    <a href="game.php"><img src="<?= $h(image_url('forgame.jpg', 1200)) ?>" alt="نادي الذكاء" width="776" height="691"></a>
+  </nav>
+</main>
 <?php else: ?>
 <main class="player-page" oncontextmenu="return false">
   <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450"><?php endif ?>

@@ -47,7 +47,7 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
   <div class="cert">
     <svg class="big" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z" fill="#ffcb05" stroke="#e9a400" stroke-width="1.6" stroke-linejoin="round"/></svg>
     <p>بقي <?= strtr((string)$left, array_combine(range(0, 9), ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'])) ?> من الحروف. استمع إليها كلها لتحصل على الشهادة!</p>
-    <div class="btns"><a href="./">العودة</a></div>
+    <div class="btns"><a href="./?letters">العودة</a></div>
   </div>
 <?php else: ?>
   <div class="cert">
@@ -58,7 +58,7 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
     <p>قد أتمّ الاستماع إلى الحروف العربية الثمانية والعشرين بنجاح.</p>
     <p class="date" id="date"></p>
   </div>
-  <div class="btns"><button onclick="print()">طباعة</button><a href="./">العودة</a></div>
+  <div class="btns"><button onclick="print()">طباعة</button><a href="./?letters">العودة</a></div>
   <script>document.getElementById('date').textContent = new Date().toLocaleDateString('ar', { year: 'numeric', month: 'long', day: 'numeric' });</script>
   <script src="party.js?v=<?= filemtime(__DIR__ . '/party.js') ?>"></script>
   <script>rain(140); burst(innerWidth / 2, 160, 50, 1.4);</script>

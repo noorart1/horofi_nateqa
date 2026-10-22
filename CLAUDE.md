@@ -11,7 +11,7 @@ Plain PHP 8 + PDO (MySQL/MariaDB on the server, SQLite locally), no framework, n
 
 ## Layout
 - `public/`: **web root** (the subdomain's document root must point here)
-  - `index.php`: login / register / password reset (with the license code) and the player page
+  - `index.php`: login / register / password reset (with the license code); after login a choice page (banner + two picture buttons `img/main.jpg` → `?letters`, the player page, and `img/forgame.jpg` → `game.php`). Links back to the letters go to `./?letters`
   - `player.js`: player (Web Audio decoding via `fetchTrack()`, waveform, swipeable cover, thumbnails, letter grid, shuffle/repeat, speed with WSOLA, stars/medals)
   - `party.js`: celebrations with anime.js (confetti burst/rain, the star that flies to a learned letter, medal pops); resolves at once with an opacity-only reward under reduced motion. Loads anime.js itself (see Stack); its functions keep their names and still return promises
   - `vendor/anime-4.5.0.umd.min.js`: anime.js (MIT, license beside it)

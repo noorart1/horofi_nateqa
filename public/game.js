@@ -5,8 +5,10 @@
 const app = document.getElementById('app');
 const ar = n => Number(n).toLocaleString('ar');
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const has = path => GAME_FILES.has(path.split('/').pop());
-const WORDS = GAME_WORDS.filter(w => has(w.card) && has(w.pic) && has(w.cut));
+const file = path => path.split('/').pop();
+const WORDS = GAME_WORDS.filter(w => [w.card, w.pic, w.cut].every(u => Object.hasOwn(GAME_FILES, file(u))));
+// versioned addresses: the server lets a browser keep them a year without asking again (.htaccess)
+for (const w of WORDS) for (const k of ['card', 'pic', 'cut']) w[k] += '?v=' + GAME_FILES[file(w[k])];
 const byN = Object.fromEntries(WORDS.map(w => [w.n, w]));
 // each card's word starts with its letter (card NN = letter NN); alif as printed on the card
 const glyph = w => w.n === '01' ? 'أ' : 'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'[+w.n - 1];
@@ -55,12 +57,55 @@ function newProfile(name, avatar, age) {
 }
 function use(id) { me = store.profiles[id]; store.current = id; save(); started = Date.now(); syncSound(); return me; }
 
+// ---------- pictures: fetched once, decoded, kept ----------
+// As the page opens every picture is fetched in the background (the map's and profiles' first), at most 4 at a time so a
+// weak connection isn't choked, and decoded. A failed one is tried again after 1, 2 and 4 seconds, then left out until the
+// connection comes back. A board is drawn only when all its pictures are decoded, so none is ever seen blank or half.
+const PICS = new Map(); // url → { state: 'wait' | 'ok' | 'bad', img (kept, so the browser keeps it ready), ok: Promise<boolean> }
+const queue = [];
+let busy = 0;
+function pic(url, soon) {
+  let p = PICS.get(url);
+  if (!p) { p = { state: 'wait', tries: 0 }; p.ok = new Promise(r => p.done = r); PICS.set(url, p); queue.push(url); }
+  const i = soon ? queue.indexOf(url) : -1;
+  if (i > 0) queue.unshift(...queue.splice(i, 1));
+  pump();
+  return p.ok;
+}
+function pump() {
+  while (busy < 4 && queue.length) {
+    const url = queue.shift(), p = PICS.get(url), img = new Image();
+    busy++;
+    img.src = url;
+    img.decode().then(() => { p.img = img; p.state = 'ok'; p.done(true); }, () => {
+      if (++p.tries <= 3) return setTimeout(() => { queue.unshift(url); pump(); }, 500 << p.tries);
+      p.state = 'bad'; p.done(false);
+    }).finally(() => { busy--; pump(); });
+  }
+}
+const isOk = url => PICS.get(url)?.state === 'ok';
+const bad = w => [w.card, w.pic, w.cut].some(u => PICS.get(u)?.state === 'bad');
+const live = () => WORDS.filter(w => !bad(w)); // the words a board may use now
+function retryBad() { for (const [url, p] of PICS) if (p.state === 'bad') { PICS.delete(url); pic(url); } }
+// outside the games (map, profiles…) a picture not decoded yet waits as a softly breathing disc, never half drawn
+function hold() {
+  app.querySelectorAll('img[src]').forEach(img => {
+    const url = img.getAttribute('src');
+    if (!url || isOk(url)) return;
+    img.removeAttribute('src');
+    img.classList.add('g-pend');
+    const show = () => pic(url, true).then(ok => { if (ok) { img.src = url; img.classList.remove('g-pend'); } else img.retry = show; });
+    show();
+  });
+}
+addEventListener('online', () => { retryBad(); app.querySelectorAll('.g-pend').forEach(img => img.retry?.()); });
+
 const at = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
 
 // ---------- screens ----------
 let started = Date.now(), rested = false, G = null, auto = 0;
 const leave = () => { if (G) G.timers.forEach(clearTimeout); G = null; clearTimeout(auto); };
-const go = (html, cls = '') => { app.className = 'game-page ' + cls; app.innerHTML = html; scrollTo(0, 0); };
+const go = (html, cls = '') => { app.className = 'game-page ' + cls; app.innerHTML = html; hold(); scrollTo(0, 0); };
 const topBtn = (act, name, label, extra = '') => `<button class="g-round" data-act="${act}" aria-label="${label}" ${extra}>${icon(name)}</button>`;
 
 function profiles() {
@@ -74,10 +119,11 @@ function profiles() {
 }
 
 let draft = null;
+const AVATARS = ['01', '08', '04', '20', '21', '12', '18', '25'].filter(n => byN[n]);
 function create() {
   leave();
   draft ||= { avatar: '01', age: null };
-  const avatars = ['01', '08', '04', '20', '21', '12', '18', '25'].filter(n => byN[n]);
+  const avatars = AVATARS;
   go(`<div class="g-top">${homeLink()}</div>
     <section class="g-panel g-form">
       <h2>طفل جديد</h2>
@@ -133,11 +179,24 @@ const after = (fn, ms) => { const g = G, t = setTimeout(() => g === G && fn(), m
 function frame(hint, body) {
   go(`<div class="g-top">${topBtn('map', 'map', 'الخريطة')}
       <span class="g-dots" role="img" aria-label="الجولة ${ar(G.round + 1)} من ${ar(G.rounds)}">${Array.from({ length: G.rounds }, (_, k) => `<i class="${k < G.round ? 'on' : k === G.round ? 'now' : ''}"></i>`).join('')}</span></div>
-    <section class="g-panel"><p class="g-hint">${hint}</p>${body}</section>`, 'g-play');
+    <section class="g-panel">${hint ? `<p class="g-hint">${hint}</p>` : ''}${body}</section>`, 'g-play');
 }
+const WAIT = '<div class="g-wait" role="status" aria-label="لحظة…"><i></i><i></i><i></i></div>';
+// each game picks its board's words and returns them with the drawing; the board is drawn once all their pictures are
+// decoded (a small waiting mark until then). A word whose picture failed is left out and the board is chosen again.
 function round() {
   G.roundWrongs = 0; G.hinted = false; G.lock = false;
-  ({ word: wordRound, memory: memoryRound, shadow: shadowRound, letter: letterRound, missing: missingRound })[GAME_STATIONS[G.si].id]();
+  const t = G.board = {}, now = () => G?.board === t;
+  if (live().length < 12) { // the connection is down: wait for the pictures to come back
+    frame('', WAIT);
+    retryBad();
+    return Promise.all(WORDS.flatMap(w => [w.card, w.pic, w.cut]).map(u => pic(u))).then(() => now() && round());
+  }
+  const [ws, draw] = ({ word: wordRound, memory: memoryRound, shadow: shadowRound, letter: letterRound, missing: missingRound })[GAME_STATIONS[G.si].id]();
+  const urls = ws.flatMap(w => [w.card, w.pic, w.cut]);
+  if (urls.every(isOk)) return draw();
+  frame('', WAIT);
+  Promise.all(urls.map(u => pic(u, true))).then(oks => now() && (oks.every(Boolean) ? draw() : round()));
 }
 // a target not used yet in this game (pictures repeat only when all were used)
 function fresh(pool, n = 1, not = []) {
@@ -149,7 +208,7 @@ function fresh(pool, n = 1, not = []) {
 }
 // distractors: very easy takes the other kind (animal vs thing), harder levels the same kind, so they look alike
 function others(target, n, not = []) {
-  const pool = WORDS.filter(w => w.n !== target.n && !not.includes(w.n));
+  const pool = live().filter(w => w.n !== target.n && !not.includes(w.n));
   const same = shuffle(pool.filter(w => w.kind === target.kind)), diff = shuffle(pool.filter(w => w.kind !== target.kind));
   return (G.L === 0 ? [...diff, ...same] : G.L >= 2 ? [...same, ...diff] : shuffle(pool)).slice(0, n);
 }
@@ -274,10 +333,12 @@ function ages() {
 
 // ---------- 1. the word and its picture ----------
 function wordRound() {
-  const [target] = fresh(WORDS);
+  const [target] = fresh(live());
   const opts = shuffle([target, ...others(target, GAME_LEVELS[G.L].options - 1)]);
-  frame('هذه كلمة: المس صورتها.', `<img class="g-word" src="${target.card}" alt="${target.word}" draggable="false"><div class="g-opts">${opts.map(optBtn).join('')}</div>`);
-  pickOne(target);
+  return [opts, () => {
+    frame('هذه كلمة: المس صورتها.', `<img class="g-word" src="${target.card}" alt="${target.word}" draggable="false"><div class="g-opts">${opts.map(optBtn).join('')}</div>`);
+    pickOne(target);
+  }];
 }
 // answer by tapping one picture (games 1 and 4)
 function pickOne(target, onRight = () => {}) {
@@ -311,57 +372,59 @@ function turn(b, down) {
   };
 }
 function memoryRound() {
-  const ws = fresh(WORDS, GAME_LEVELS[G.L].pairs), shadow = G.L >= 2; // from level 2: a picture and its shadow
-  const cards = shuffle(ws.flatMap(w => [[w, false], [w, shadow]]));
-  // the cards start face up: the child looks for the level's view seconds, then they turn over one by one
-  frame('انظر جيّدًا إلى الصور وتذكّر أماكنها…',
-    `<div class="g-peek" role="progressbar" aria-label="وقت النظر"><i></i></div><div class="g-opts g-mem">${cards.map(([w, sh]) => `<button class="g-opt" data-n="${w.n}" aria-label="بطاقة"><img src="${sh ? w.cut : w.pic}" class="${sh ? 'g-sil' : ''}" alt="" draggable="false"></button>`).join('')}</div>`);
-  const all = [...app.querySelectorAll('.g-opt')];
-  G.lock = true;
-  const peek = app.querySelector('.g-peek'), view = GAME_LEVELS[G.L].view * 1000;
-  peek.firstChild.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: view, fill: 'forwards' }); // the looking time runs out
-  after(() => {
-    peek.classList.add('done');
-    all.forEach((b, i) => after(() => { turn(b, true); if (!(i % 2)) sfx('flip'); }, i * 70));
-    after(() => {
-      app.querySelector('.g-hint').textContent = shadow ? 'اقلب بطاقتين: الصورة وظلّها.' : 'اقلب بطاقتين وابحث عن الصورتين المتشابهتين.';
-      G.lock = false;
-    }, all.length * 70 + 260);
-  }, view);
-  let open = [], misses = 0, found = 0;
-  all.forEach(b => b.onclick = () => {
-    if (G.lock || b.up) return;
-    turn(b, false);
-    sfx('flip');
-    open.push(b);
-    if (open.length < 2) return;
-    const [x, y] = open;
-    open = [];
-    if (x.dataset.n === y.dataset.n) {
-      x.classList.add('pair'); y.classList.add('pair');
-      sfx('match');
-      scored(misses <= 1 ? 1 : misses <= 3 ? 2 : 3, x.dataset.n); // turning over wrong cards is how memory is played
-      misses = 0;
-      if (++found === ws.length) { cheer(y); setTimeout(() => sfx('correct'), 350); roundDone(1600); }
-      return;
-    }
-    misses++;
-    G.perfect = false;
+  const ws = fresh(live(), GAME_LEVELS[G.L].pairs), shadow = G.L >= 2; // from level 2: a picture and its shadow
+  return [ws, () => {
+    const cards = shuffle(ws.flatMap(w => [[w, false], [w, shadow]]));
+    // the cards start face up: the child looks for the level's view seconds, then they turn over one by one
+    frame('انظر جيّدًا إلى الصور وتذكّر أماكنها…',
+      `<div class="g-peek" role="progressbar" aria-label="وقت النظر"><i></i></div><div class="g-opts g-mem">${cards.map(([w, sh]) => `<button class="g-opt" data-n="${w.n}" aria-label="بطاقة"><img src="${sh ? w.cut : w.pic}" class="${sh ? 'g-sil' : ''}" alt="" draggable="false"></button>`).join('')}</div>`);
+    const all = [...app.querySelectorAll('.g-opt')];
     G.lock = true;
+    const peek = app.querySelector('.g-peek'), view = GAME_LEVELS[G.L].view * 1000;
+    peek.firstChild.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: view, fill: 'forwards' }); // the looking time runs out
     after(() => {
-      turn(x, true); turn(y, true); G.lock = false;
+      peek.classList.add('done');
+      all.forEach((b, i) => after(() => { turn(b, true); if (!(i % 2)) sfx('flip'); }, i * 70));
+      after(() => {
+        app.querySelector('.g-hint').textContent = shadow ? 'اقلب بطاقتين: الصورة وظلّها.' : 'اقلب بطاقتين وابحث عن الصورتين المتشابهتين.';
+        G.lock = false;
+      }, all.length * 70 + 260);
+    }, view);
+    let open = [], misses = 0, found = 0;
+    all.forEach(b => b.onclick = () => {
+      if (G.lock || b.up) return;
+      turn(b, false);
       sfx('flip');
-      // after three misses in a row, a pair that is still hidden glows for a moment
-      if (misses >= 3) {
-        const n = all.find(c => !c.up)?.dataset.n;
-        const two = all.filter(c => !c.up && c.dataset.n === n);
-        two.forEach(c => c.classList.add('hint'));
-        after(() => two.forEach(c => c.classList.remove('hint')), 1500);
-        G.hinted = true;
-        sfx('hint');
+      open.push(b);
+      if (open.length < 2) return;
+      const [x, y] = open;
+      open = [];
+      if (x.dataset.n === y.dataset.n) {
+        x.classList.add('pair'); y.classList.add('pair');
+        sfx('match');
+        scored(misses <= 1 ? 1 : misses <= 3 ? 2 : 3, x.dataset.n); // turning over wrong cards is how memory is played
+        misses = 0;
+        if (++found === ws.length) { cheer(y); setTimeout(() => sfx('correct'), 350); roundDone(1600); }
+        return;
       }
-    }, 900);
-  });
+      misses++;
+      G.perfect = false;
+      G.lock = true;
+      after(() => {
+        turn(x, true); turn(y, true); G.lock = false;
+        sfx('flip');
+        // after three misses in a row, a pair that is still hidden glows for a moment
+        if (misses >= 3) {
+          const n = all.find(c => !c.up)?.dataset.n;
+          const two = all.filter(c => !c.up && c.dataset.n === n);
+          two.forEach(c => c.classList.add('hint'));
+          after(() => two.forEach(c => c.classList.remove('hint')), 1500);
+          G.hinted = true;
+          sfx('hint');
+        }
+      }, 900);
+    });
+  }];
 }
 
 // ---------- drag a picture onto its place (games 3 and 5), or tap it and then tap the place ----------
@@ -447,47 +510,53 @@ function placer(onPlaced) {
 
 // ---------- 3. put it in its place (shadows) ----------
 function shadowRound() {
-  const k = GAME_LEVELS[G.L].drag, [first] = fresh(WORDS);
+  const k = GAME_LEVELS[G.L].drag, [first] = fresh(live());
   const ws = [first, ...others(first, k - 1)]; // from level 2 the shadows are of the same kind, so they look alike
-  frame('اسحب كلّ صورة إلى ظلّها.',
-    `<div class="g-slots">${shuffle(ws).map(w => `<div class="g-slot open" data-n="${w.n}"><img class="g-sil" src="${w.cut}" alt=""></div>`).join('')}</div>
-     <div class="g-tray">${shuffle(ws).map(w => `<button class="g-piece" data-n="${w.n}" aria-label="صورة"><img src="${w.cut}" alt="" draggable="false"></button>`).join('')}</div>`);
-  let left = ws.length;
-  dragKit(placer(() => { me.placed++; badges(); if (!--left) roundDone(1600); }));
+  return [ws, () => {
+    frame('اسحب كلّ صورة إلى ظلّها.',
+      `<div class="g-slots">${shuffle(ws).map(w => `<div class="g-slot open" data-n="${w.n}"><img class="g-sil" src="${w.cut}" alt=""></div>`).join('')}</div>
+       <div class="g-tray">${shuffle(ws).map(w => `<button class="g-piece" data-n="${w.n}" aria-label="صورة"><img src="${w.cut}" alt="" draggable="false"></button>`).join('')}</div>`);
+    let left = ws.length;
+    dragKit(placer(() => { me.placed++; badges(); if (!--left) roundDone(1600); }));
+  }];
 }
 
 // ---------- 4. which picture starts with this letter? ----------
 function letterRound() {
-  const [target] = fresh(WORDS);
+  const [target] = fresh(live());
   const opts = shuffle([target, ...others(target, GAME_LEVELS[G.L].options - 1)]);
-  frame('أيّ صورة تبدأ كلمتها بهذا الحرف؟', `<div class="g-letter" role="img" aria-label="الحرف ${glyph(target)}">${glyph(target)}</div><div class="g-opts">${opts.map(optBtn).join('')}</div>`);
-  // the answer brings its word card in the letter's place: the same letter, now in red at the start of the word
-  pickOne(target, () => { me.letters++; app.querySelector('.g-letter').outerHTML = `<img class="g-word" src="${target.card}" alt="${target.word}">`; });
+  return [opts, () => {
+    frame('أيّ صورة تبدأ كلمتها بهذا الحرف؟', `<div class="g-letter" role="img" aria-label="الحرف ${glyph(target)}">${glyph(target)}</div><div class="g-opts">${opts.map(optBtn).join('')}</div>`);
+    // the answer brings its word card in the letter's place: the same letter, now in red at the start of the word
+    pickOne(target, () => { me.letters++; app.querySelector('.g-letter').outerHTML = `<img class="g-word" src="${target.card}" alt="${target.word}">`; });
+  }];
 }
 
 // ---------- 5. who vanished? ----------
 function missingRound() {
-  const lv = GAME_LEVELS[G.L], shown = fresh(WORDS, lv.items), gone = shuffle(shown).slice(0, lv.missing);
-  frame('انظر جيّدًا… ثمّ أعِد الصورة التي اختفت إلى مكانها.',
-    `<div class="g-timer"><i style="animation-duration:${lv.view}s"></i></div>
-     <div class="g-slots g-shown">${shown.map(w => `<div class="g-slot pic" data-n="${w.n}" data-img="pic"><img src="${w.pic}" alt=""></div>`).join('')}</div>`);
-  after(() => {
-    app.querySelector('.g-timer').remove();
-    sfx('disappear');
-    gone.forEach(w => {
-      const s = app.querySelector(`.g-slot[data-n="${w.n}"]`);
-      const img = s.firstChild;
-      img.animate([{ transform: 'none', opacity: 1 }, { transform: 'scale(.3) rotate(25deg)', opacity: 0 }], { duration: still.matches ? 1 : 450, easing: 'ease-in', fill: 'forwards' })
-        .onfinish = () => { img.remove(); s.classList.add('open'); };
-    });
-    const extra = Math.max(lv.options, gone.length + 1) - gone.length;
-    const opts = shuffle([...gone, ...others(gone[0], extra, shown.map(w => w.n))]);
-    app.querySelector('.g-panel').insertAdjacentHTML('beforeend',
-      `<div class="g-tray">${opts.map(w => `<button class="g-piece pic" data-n="${w.n}" aria-label="صورة"><img src="${w.pic}" alt="" draggable="false"></button>`).join('')}</div>`);
-    let left = gone.length;
-    // the open places only exist after the vanishing animation; until then a drop finds no place and glides back
-    dragKit(placer(() => { me.found++; badges(); if (!--left) roundDone(1800); }));
-  }, lv.view * 1000);
+  const lv = GAME_LEVELS[G.L], shown = fresh(live(), lv.items), gone = shuffle(shown).slice(0, lv.missing);
+  const extra = Math.max(lv.options, gone.length + 1) - gone.length;
+  const opts = shuffle([...gone, ...others(gone[0], extra, shown.map(w => w.n))]);
+  return [[...shown, ...opts], () => {
+    frame('انظر جيّدًا… ثمّ أعِد الصورة التي اختفت إلى مكانها.',
+      `<div class="g-timer"><i style="animation-duration:${lv.view}s"></i></div>
+       <div class="g-slots g-shown">${shown.map(w => `<div class="g-slot pic" data-n="${w.n}" data-img="pic"><img src="${w.pic}" alt=""></div>`).join('')}</div>`);
+    after(() => {
+      app.querySelector('.g-timer').remove();
+      sfx('disappear');
+      gone.forEach(w => {
+        const s = app.querySelector(`.g-slot[data-n="${w.n}"]`);
+        const img = s.firstChild;
+        img.animate([{ transform: 'none', opacity: 1 }, { transform: 'scale(.3) rotate(25deg)', opacity: 0 }], { duration: still.matches ? 1 : 450, easing: 'ease-in', fill: 'forwards' })
+          .onfinish = () => { img.remove(); s.classList.add('open'); };
+      });
+      app.querySelector('.g-panel').insertAdjacentHTML('beforeend',
+        `<div class="g-tray">${opts.map(w => `<button class="g-piece pic" data-n="${w.n}" aria-label="صورة"><img src="${w.pic}" alt="" draggable="false"></button>`).join('')}</div>`);
+      let left = gone.length;
+      // the open places only exist after the vanishing animation; until then a drop finds no place and glides back
+      dragKit(placer(() => { me.found++; badges(); if (!--left) roundDone(1800); }));
+    }, lv.view * 1000);
+  }];
 }
 
 // ---------- taps ----------
@@ -515,4 +584,9 @@ function mark(b, cls) {
 function homeLink() { return `<a class="g-round" href="./?letters" aria-label="العودة إلى الحروف">${icon('home')}</a>`; }
 
 if (WORDS.length < 12) go('<section class="g-panel"><p class="g-hint">لا توجد بطاقات كافية بعد.</p></section>');
-else { syncSound(); me ? map() : profiles(); }
+else {
+  const first = [...Object.values(store.profiles).map(p => byN[p.avatar]?.pic), ...GAME_AGES.map(a => byN[a.pic]?.cut), ...AVATARS.map(n => byN[n].pic)];
+  first.forEach(u => u && pic(u));
+  addEventListener('load', () => WORDS.forEach(w => [w.card, w.pic, w.cut].forEach(u => pic(u)))); // the rest after the page has loaded, so the tab doesn't spin
+  syncSound(); me ? map() : profiles();
+}

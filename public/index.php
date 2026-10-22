@@ -175,6 +175,19 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
     <a href="game.php"><img src="<?= $h(image_url('forgame.jpg', 1200)) ?>" alt="نادي الذكاء" width="776" height="691"></a>
   </nav>
 </main>
+<script src="sfx.js?v=<?= filemtime(__DIR__ . '/sfx.js') ?>"></script>
+<script>
+// each card chimes as its sun ring lights (the ring runs under reduced motion too), for the first few turns; a tap pops.
+// The player page's speaker toggle mutes these too. (A browser may keep sound off until the first touch on the page.)
+{ let on = true; try { on = localStorage.getItem('sfx') !== '0'; } catch {} AudioManager.set({ muted: !on, volume: 0.55 }); }
+let chimes = 6;
+document.querySelectorAll('.choose a').forEach(a => {
+  const chime = e => { if (e.animationName === 'choose-ring' && chimes-- > 0) setTimeout(() => AudioManager.play('hint'), 300); };
+  a.addEventListener('animationstart', chime);
+  a.addEventListener('animationiteration', chime);
+  a.addEventListener('pointerdown', () => AudioManager.play('bubble'));
+});
+</script>
 <?php else: ?>
 <main class="player-page" oncontextmenu="return false">
   <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450"><?php endif ?>

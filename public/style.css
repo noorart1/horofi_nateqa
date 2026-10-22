@@ -31,9 +31,15 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 /* after login: two big picture buttons, letters or games */
 .choose { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .choose a { display:block; border-radius:24px; overflow:hidden; border:6px solid #fff; box-shadow:0 8px 0 var(--line), 0 20px 30px -20px #00507a66; transition:transform .12s, box-shadow .12s; }
-.choose a:active { transform:translateY(6px); box-shadow:0 2px 0 var(--line), 0 4px 8px -4px #00507a33; }
+.choose a:active { transform:translateY(6px); box-shadow:0 2px 0 var(--line), 0 4px 8px -4px #00507a33; animation:none; }
 .choose img { display:block; width:100%; height:auto; }
-@media (prefers-reduced-motion:reduce) { .choose a { transition:none; } }
+/* "tap me": the two cards hop in turn, each with a sun ring, so the child sees they are buttons */
+.choose a { position:relative; animation:choose-hop 3.2s cubic-bezier(.2,.8,.2,1) .6s infinite; }
+.choose a + a { animation-delay:2.2s; }
+.choose a::after { content:""; position:absolute; inset:0; border-radius:18px; border:6px solid var(--sun); opacity:0; pointer-events:none; animation:inherit; animation-name:choose-ring; }
+@keyframes choose-hop { 0%, 50%, 100% { transform:none; } 12% { transform:translateY(-14px) rotate(-2deg) scale(1.04); } 24% { transform:translateY(0) scale(.98); } 34% { transform:translateY(-5px) rotate(1deg); } }
+@keyframes choose-ring { 0%, 50%, 100% { opacity:0; } 12%, 34% { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .choose a { transition:none; animation:none; } .choose a::after { animation:choose-ring 3.2s .6s infinite; } .choose a + a::after { animation-delay:2.2s; } }
 /* player page */
 .player-page { width:100%; max-width:760px; align-self:flex-start; }
 .top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; color:var(--muted); font-size:.9rem; font-weight:600; }
@@ -357,6 +363,14 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 @keyframes g-pulse { 50% { transform:scale(1.06); } }
 @keyframes g-time { to { transform:scaleX(0); } }
 @keyframes g-drop { from { transform:translateY(-40px); opacity:0; } }
+/* a board whose pictures are still coming: three sun dots hop in turn. A picture outside the games: a breathing pale disc with a star */
+.g-wait { display:flex; justify-content:center; gap:12px; padding:64px 0; }
+.g-wait i { width:18px; height:18px; border-radius:50%; background:var(--sun); box-shadow:0 4px 0 var(--sun-deep); animation:g-hop .9s cubic-bezier(.2,.8,.2,1) infinite; }
+.g-wait i:nth-child(2) { animation-delay:.15s; } .g-wait i:nth-child(3) { animation-delay:.3s; }
+img.g-pend { background:var(--star) center / 40% no-repeat, var(--sky-pale); border-radius:50%; animation:g-breathe 1.2s ease-in-out infinite alternate; }
+@keyframes g-hop { 0%, 60%, 100% { transform:none; } 30% { transform:translateY(-14px); } }
+@keyframes g-breathe { to { opacity:.45; } }
+@media (prefers-reduced-motion:reduce) { .g-wait i { animation:g-breathe .9s ease-in-out infinite alternate; } }
 @media (prefers-reduced-motion:reduce) {
   .g-opt, .g-piece, .g-round, .g-me, .g-slot, .g-disc, .g-opt.wrong, .g-piece.wrong, .g-opt.hint, .g-slot.hint, .g-slot.done img,
   .g-center > .g-stars i.on, .g-award { animation:none; transition:none; }

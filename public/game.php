@@ -8,8 +8,9 @@ if (!$user) {
     header('Location: ./');
     exit;
 }
-// which pictures exist: a card needs its word card, picture and cut-out (tools/game_cards.php)
-$have = array_map('basename', glob(__DIR__ . '/img/game/*.webp') ?: []);
+// which pictures exist, with their versions (a card needs its word card, picture and cut-out: tools/game_cards.php)
+$have = [];
+foreach (glob(__DIR__ . '/img/game/*.webp') ?: [] as $f) $have[basename($f)] = image_version($f);
 $v = fn($f) => filemtime(__DIR__ . "/$f");
 ?>
 <!doctype html>
@@ -24,7 +25,7 @@ $v = fn($f) => filemtime(__DIR__ . "/$f");
 </head>
 <body>
 <main class="game-page" id="app" aria-live="polite"></main>
-<script>const GAME_FILES = new Set(<?= json_encode($have) ?>), USER_NAME = <?= json_encode($user['username'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;</script>
+<script>const GAME_FILES = <?= json_encode((object)$have) ?>, USER_NAME = <?= json_encode($user['username'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;</script>
 <script defer src="party.js?v=<?= $v('party.js') ?>"></script>
 <script defer src="sfx.js?v=<?= $v('sfx.js') ?>"></script>
 <script defer src="game-data.js?v=<?= $v('game-data.js') ?>"></script>

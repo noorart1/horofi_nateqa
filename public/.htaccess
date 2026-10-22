@@ -15,4 +15,9 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
   <FilesMatch "\.(css|js|woff2)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
+  # the games' pictures (img/game/NN.webp, NNp, NNc): game.js links them with ?v=<version>, the same rule.
+  # (other pictures go through img.php, which sends its own headers; no page links an img/*.webp directly)
+  <FilesMatch "^\d\d[pc]?\.webp$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>

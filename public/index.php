@@ -107,6 +107,24 @@ if ($logged && !$home) {
 $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
 $animPlayer = !empty($animated) ? 'anim/player.html?v=' . image_version(__DIR__ . '/anim/player.html') : null;
 $banner = image_url('headerontop.jpg', 1200);
+if ($home) {
+    $total = count(tracks());
+    $s = db()->prepare('SELECT COUNT(*) FROM progress WHERE user_id = ?');
+    $s->execute([$me['id']]);
+    $heardCount = min($total, (int)$s->fetchColumn());
+    $ar = fn(int $n) => strtr((string)$n, ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']);
+    // the living banner: layers cut by tools/banner_layers.py (img/banner/ is not in git); without them it stays still
+    $bdir = __DIR__ . '/img/banner/';
+    $layers = is_file($bdir . 'layers.json') ? json_decode(file_get_contents($bdir . 'layers.json'), true) : null;
+    $live = null;
+    if ($banner && $layers && is_file($bdir . 'base.jpg')) {
+        $live = ['at' => $layers, 'base' => image_url('banner/base.jpg', 1200)];
+        foreach (['hand', 'forearm', 'note', 'clef', 'marker'] as $n) {
+            if (!is_file($bdir . "$n.png")) { $live = null; break; }
+            $live[$n] = "img/banner/$n.png?v=" . image_version($bdir . "$n.png");
+        }
+    }
+}
 ?>
 <!doctype html>
 <html lang="ar" dir="rtl">
@@ -164,30 +182,38 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
 });
 </script>
 <?php elseif ($home): ?>
-<main class="player-page">
-  <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450" fetchpriority="high"><?php endif ?>
-  <div class="top">
-    <span><?= $h($me['username']) ?><?php if ($me['is_admin']): ?> · <a href="admin.php">لوحة الإدارة</a><?php endif ?></span>
-    <form method="post"><input type="hidden" name="action" value="logout"><button>تسجيل الخروج</button></form>
+<main class="player-page home">
+  <?php if ($banner): ?><div class="hero" id="hero">
+    <img class="banner" id="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450" fetchpriority="high">
+    <button class="boy" id="boy" aria-label="قل مرحبًا للولد"></button>
+    <span class="bubble" id="bubble" aria-hidden="true">أهلًا!</span>
+  </div><?php endif ?>
+  <div class="hi">
+    <h1>أهلًا يا بطل!<small><?= $h($me['username']) ?></small></h1>
+    <div class="grown">
+      <button class="gear" id="gear" aria-label="للكبار: اضغط مطولًا" aria-haspopup="true" aria-expanded="false" aria-controls="menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <svg class="hold" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" pathLength="100"/></svg>
+      </button>
+      <span class="tip" id="tip" aria-hidden="true">للكبار: اضغط مطولًا</span>
+      <div class="menu" id="menu" hidden>
+        <?php if ($me['is_admin']): ?><a href="admin.php">لوحة الإدارة</a><?php endif ?>
+        <form method="post"><input type="hidden" name="action" value="logout"><button class="out">تسجيل الخروج</button></form>
+      </div>
+    </div>
   </div>
-  <nav class="choose">
-    <a href="?letters"><img src="<?= $h(image_url('main.jpg', 1200)) ?>" alt="مدرسة الحروف" width="776" height="691"></a>
-    <a href="game.php"><img src="<?= $h(image_url('forgame.jpg', 1200)) ?>" alt="نادي الذكاء" width="776" height="691"></a>
+  <nav class="choose" id="choose">
+    <a href="?letters" class="go-letters"><img src="<?= $h(image_url('main.jpg', 1200)) ?>" alt="مدرسة الحروف" width="776" height="691">
+      <?php if ($heardCount): ?><span class="badge" aria-label="الحروف المسموعة: <?= $ar($heardCount) ?> من <?= $ar($total) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z" fill="#ffcb05" stroke="#e9a400" stroke-width="1.2" stroke-linejoin="round"/></svg><b><?= $ar($heardCount) ?> / <?= $ar($total) ?></b></span><?php endif ?></a>
+    <a href="game.php" class="go-game"><img src="<?= $h(image_url('forgame.jpg', 1200)) ?>" alt="نادي الذكاء" width="776" height="691">
+      <span class="badge" id="medals" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8l-2 6h-4z" fill="#9560a6"/><circle cx="12" cy="15" r="6.5" fill="#ffcb05" stroke="#e9a400" stroke-width="1.2"/><path d="M12 11.6l1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3z" fill="#fff"/></svg><b></b></span></a>
   </nav>
+  <script>try { if (!sessionStorage.getItem('choice-in') && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.getElementById('choose').classList.add('wait'); } catch {} // hidden until the cards drop in (choice.js)</script>
+  <div class="meadow"><canvas id="meadow" role="img" aria-label="حيوانات صغيرة في العشب، المسها"></canvas></div>
 </main>
-<script src="sfx.js?v=<?= filemtime(__DIR__ . '/sfx.js') ?>"></script>
-<script>
-// each card chimes as its sun ring lights (the ring runs under reduced motion too), for the first few turns; a tap pops.
-// The player page's speaker toggle mutes these too. (A browser may keep sound off until the first touch on the page.)
-{ let on = true; try { on = localStorage.getItem('sfx') !== '0'; } catch {} AudioManager.set({ muted: !on, volume: 0.55 }); }
-let chimes = 6;
-document.querySelectorAll('.choose a').forEach(a => {
-  const chime = e => { if (e.animationName === 'choose-ring' && chimes-- > 0) setTimeout(() => AudioManager.play('hint'), 300); };
-  a.addEventListener('animationstart', chime);
-  a.addEventListener('animationiteration', chime);
-  a.addEventListener('pointerdown', () => AudioManager.play('bubble'));
-});
-</script>
+<script>const LIVE = <?= json_encode($live, JSON_UNESCAPED_SLASHES) ?>;</script>
+<script src="sfx.js?v=<?= filemtime(__DIR__ . '/sfx.js') ?>" defer></script>
+<script src="choice.js?v=<?= filemtime(__DIR__ . '/choice.js') ?>" defer></script>
 <?php else: ?>
 <main class="player-page" oncontextmenu="return false">
   <?php if ($banner): ?><img class="banner" src="<?= $h($banner) ?>" alt="حروفي الناطقة" width="1200" height="450"><?php endif ?>

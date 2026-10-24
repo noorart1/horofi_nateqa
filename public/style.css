@@ -28,18 +28,67 @@ input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 4px #0070
 [hidden] { display:none !important; }
 .banner { display:block; width:100%; height:auto; aspect-ratio:1600 / 600; object-fit:cover; border-radius:24px; margin-bottom:14px; box-shadow:0 10px 24px -14px #00507a66; }
 .card .banner { margin:-8px 0 16px; border-radius:20px; box-shadow:none; }
-/* after login: two big picture buttons, letters or games */
-.choose { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.choose a { display:block; border-radius:24px; overflow:hidden; border:6px solid #fff; box-shadow:0 8px 0 var(--line), 0 20px 30px -20px #00507a66; transition:transform .12s, box-shadow .12s; }
-.choose a:active { transform:translateY(6px); box-shadow:0 2px 0 var(--line), 0 4px 8px -4px #00507a33; animation:none; }
+/* after login (index.php, moved by choice.js): a living banner, a greeting, two big picture buttons, a meadow */
+html, body { overflow-x:clip; } /* nothing that flies in (a falling card, a drop of jelly) may ever scroll the page sideways */
+.home { min-height:calc(100dvh - 48px); display:flex; flex-direction:column; }
+/* the banner: the still picture until its layers are ready, then the background with the moving parts over it (all placed
+   in the picture's own 992 × 372 space as percentages, see tools/banner_layers.py) */
+.hero { position:relative; direction:ltr; border-radius:24px; overflow:hidden; margin-bottom:14px; box-shadow:0 10px 24px -14px #00507a66; isolation:isolate; }
+.hero .banner { margin:0; border-radius:0; box-shadow:none; }
+.hero .lay { position:absolute; pointer-events:none; will-change:transform; }
+.hero .arm { position:absolute; pointer-events:none; will-change:rotate; }
+.hero .arm img { position:absolute; inset:0; width:100%; height:100%; will-change:rotate; }
+.lid { position:absolute; border-radius:50%; overflow:hidden; pointer-events:none; }
+.lid i { position:absolute; inset:0; transform-origin:50% 0; transform:scaleY(0); border-bottom:3px solid #5a3524; border-radius:0 0 50% 50% / 0 0 30% 30%; }
+.ink { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.fly, .twk { position:absolute; left:0; top:0; width:7%; pointer-events:none; will-change:transform, opacity; }
+.twk { width:2.6%; opacity:0; }
+.fly svg, .twk svg { display:block; width:100%; height:auto; }
+.boy, .pen { position:absolute; border:0; background:none; padding:0; cursor:pointer; min-width:52px; min-height:52px; }
+.boy { left:60%; top:0; width:40%; height:100%; }
+.bubble { position:absolute; left:41%; top:9%; padding:8px 16px; border-radius:20px; background:#fff; color:var(--ink); font-weight:800; font-size:clamp(1rem, 4.4vw, 1.6rem);
+  box-shadow:0 6px 0 #00000012; opacity:0; transform:scale(.4); transform-origin:90% 100%; pointer-events:none; direction:rtl; }
+.bubble::after { content:""; position:absolute; right:10px; bottom:-9px; border:9px solid transparent; border-top-color:#fff; border-bottom:0; }
+/* the greeting, and the grown-ups' corner: a small gear that opens only when held for a second (a child's quick tap does nothing) */
+.hi { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:52px; margin-bottom:14px; }
+.hi h1 { margin:0; text-align:start; font-size:1.5rem; }
+.hi small { display:block; font-family:Vazirmatn, Tahoma, sans-serif; font-weight:600; font-size:.85rem; color:var(--muted); }
+.grown { position:relative; }
+.gear { position:relative; display:grid; place-items:center; width:52px; height:52px; border:0; border-radius:14px; background:#ffffff99; color:var(--muted); cursor:pointer;
+  touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+.gear svg { width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.gear .hold { position:absolute; inset:3px; width:auto; height:auto; transform:rotate(-90deg); pointer-events:none; }
+.gear .hold circle { fill:none; stroke:var(--blue); stroke-width:4; stroke-dasharray:100; stroke-dashoffset:100; opacity:0; } /* opacity: the round cap of an empty dash is still a dot */
+.gear.holding .hold circle { opacity:1; stroke-dashoffset:0; transition:stroke-dashoffset 1s linear; }
+.tip, .menu { position:absolute; inset-inline-end:0; top:60px; z-index:10; background:var(--card); color:var(--ink); box-shadow:0 18px 40px -16px #00507a88; }
+.tip { font-size:.85rem; font-weight:600; padding:6px 12px; border-radius:14px; white-space:nowrap; opacity:0; transition:opacity .2s; pointer-events:none; }
+.tip.on { opacity:1; }
+.menu { border-radius:20px; padding:8px; min-width:190px; display:grid; gap:4px; }
+.menu form { margin:0; }
+.menu a, .menu button { display:flex; align-items:center; width:100%; min-height:52px; padding:0 14px; border:0; border-radius:14px; background:none;
+  font:inherit; font-weight:700; text-align:start; color:var(--blue); text-decoration:none; cursor:pointer; }
+.menu a:hover, .menu button:hover { background:var(--sky-pale); }
+.menu .out { color:var(--err); }
+/* the two big cards: stacked and full width on phones, side by side from 600px; the picture keeps its own shape */
+.choose { --goo:var(--sun); position:relative; display:grid; grid-template-columns:1fr; gap:18px; }
+@media (min-width:600px) { .choose { grid-template-columns:1fr 1fr; } }
+.choose .go-letters { --goo:#e282d5; } /* the jelly's colour: each picture's own (change it with the picture) */
+.choose .go-game { --goo:#6dd4e5; }
+.choose a { position:relative; z-index:1; display:block; border-radius:24px; overflow:hidden; border:6px solid #fff;
+  box-shadow:0 8px 0 var(--line), 0 20px 30px -20px #00507a66; transition:transform .12s, box-shadow .12s; }
+.choose a:active { transform:translateY(6px); box-shadow:0 2px 0 var(--line), 0 4px 8px -4px #00507a33; }
 .choose img { display:block; width:100%; height:auto; }
-/* "tap me": the two cards hop in turn, each with a sun ring, so the child sees they are buttons */
-.choose a { position:relative; animation:choose-hop 3.2s cubic-bezier(.2,.8,.2,1) .6s infinite; }
-.choose a + a { animation-delay:2.2s; }
-.choose a::after { content:""; position:absolute; inset:0; border-radius:18px; border:6px solid var(--sun); opacity:0; pointer-events:none; animation:inherit; animation-name:choose-ring; }
-@keyframes choose-hop { 0%, 50%, 100% { transform:none; } 12% { transform:translateY(-14px) rotate(-2deg) scale(1.04); } 24% { transform:translateY(0) scale(.98); } 34% { transform:translateY(-5px) rotate(1deg); } }
-@keyframes choose-ring { 0%, 50%, 100% { opacity:0; } 12%, 34% { opacity:1; } }
-@media (prefers-reduced-motion:reduce) { .choose a { transition:none; animation:none; } .choose a::after { animation:choose-ring 3.2s .6s infinite; } .choose a + a::after { animation-delay:2.2s; } }
+.choose a::after { content:""; position:absolute; inset:0; border-radius:18px; border:6px solid var(--sun); opacity:0; pointer-events:none; }
+.choose.wait a { opacity:0; }
+.badge { position:absolute; bottom:10px; inset-inline-start:10px; display:flex; align-items:center; gap:6px; padding:6px 12px 6px 10px; border-radius:999px;
+  background:#fff; color:var(--ink); font-weight:800; font-size:1rem; box-shadow:0 4px 0 #00000014; }
+.badge svg { width:22px; height:22px; }
+.ground { position:absolute; z-index:0; height:16px; border-radius:50%; background:radial-gradient(closest-side, #00507a4d, transparent); pointer-events:none; }
+.goo { position:fixed; z-index:0; border-radius:50%; pointer-events:none; }
+/* the living ground: grass, flowers and a few animals from the book; tap one and it jumps and makes its sound */
+.meadow { position:relative; height:130px; margin:auto -16px -24px; }
+.meadow canvas { position:absolute; inset:0; width:100%; height:100%; display:block; cursor:pointer; }
+@media (prefers-reduced-motion:reduce) { .choose a { transition:none; } }
 /* player page */
 .player-page { width:100%; max-width:760px; align-self:flex-start; }
 .top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; color:var(--muted); font-size:.9rem; font-weight:600; }

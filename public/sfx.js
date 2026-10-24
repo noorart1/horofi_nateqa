@@ -147,6 +147,14 @@ const AudioManager = (() => {
       [N.C5, N.G5, N.C6, N.E6, N.G6].forEach((f, i) => bell(f, i * 0.1, 0.9, 0.07));
       note(420, 0.55, 0.14, { to: 1000, sweep: 0.09, gain: 0.12 });
     }],
+    // the choice page: a card lands like jelly, the banner's boy says hello, his marker writes, the meadow's animals
+    land: ['هبوط بطاقة', 'Jelly Landing', 120, () => { const v = vary(0.08); note(150 * v, 0, 0.24, { to: 400 * v, sweep: 0.15, gain: 0.16, fm: { ratio: 0.12, index: 0.12 } }); }],
+    hello: ['تحية الولد', 'Hello', 400, () => { note(520, 0, 0.14, { type: 'triangle', to: 780, sweep: 0.1, gain: 0.09 }); note(660, 0.15, 0.17, { type: 'triangle', to: 990, sweep: 0.11, gain: 0.09 }); }],
+    scratch: ['كتابة بالقلم', 'Marker Scratch', 1200, () => { for (let i = 0; i < 5; i++) hush(0.3 + i * 0.22, 0.2, { from: 2800 * vary(0.1), to: 3600, q: 1.2, gain: 0.035 }); }],
+    snail: ['حلزون', 'Snail', 300, () => note(300, 0, 0.3, { to: 200, sweep: 0.21, gain: 0.08, fm: { ratio: 0.1, index: 0.04 } })],
+    ladybug: ['دعسوقة', 'Ladybug', 200, () => { note(900 * vary(), 0, 0.12, { type: 'triangle', to: 1300, sweep: 0.08, gain: 0.07 }); hush(0.02, 0.12, { from: 4000, q: 2, gain: 0.02 }); }],
+    worm: ['دودة', 'Worm', 300, () => note(500, 0, 0.22, { to: 300, sweep: 0.15, gain: 0.08, fm: { ratio: 0.06, index: 0.08 } })],
+    flutter: ['فراشة', 'Butterfly', 200, () => { bell(N.A6 * vary(), 0, 0.3, 0.035); bell(N.E7, 0.07, 0.25, 0.025); }],
     celebrate: ['نهاية كلّ الألعاب', 'Celebration Melody', 1500, () => pick([() => {
       [N.C6, N.D6, N.E6, N.G6, N.E6, N.G6, N.A6, N.C7].forEach((f, i) => xylo(f, i * 0.12, 0.11));
       [[N.C4, 0], [N.G4, 0.48], [N.C5, 0.96]].forEach(([f, t]) => note(f, t, 0.6, { type: 'triangle', gain: 0.08, lp: 1200 }));
@@ -170,6 +178,8 @@ const AudioManager = (() => {
       last[name] = now;
       try { fx[3](); } catch {} // a sound must never break the game
     },
+    // is sound allowed yet? (tries to start it; a browser keeps it locked until a touch, and a sound played meanwhile would come late)
+    live() { if (!setup()) return false; if (ctx.state !== 'running') ctx.resume().catch(() => {}); return ctx.state === 'running'; },
     set(p) { Object.assign(P, p); apply(); },
     get: () => ({ ...P }),
     list: () => Object.entries(FX).map(([id, [ar, en]]) => ({ id, ar, en })),

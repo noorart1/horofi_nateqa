@@ -6,8 +6,8 @@ require __DIR__ . '/../lib.php';
 $name = (string)($_GET['f'] ?? '');
 $width = (int)($_GET['w'] ?? 0);
 $src = ROOT . '/public/img/' . $name;
-// a file in public/img, or in its icon/ folder (the letters' round icons); no other path
-if (!in_array($width, IMAGE_WIDTHS, true) || !preg_match('~^(icon/)?[\w-][\w.-]*\.(webp|jpe?g|png)$~iD', $name) || !is_file($src)) {
+// a file in public/img, or in its icon/ folder (the letters' round icons) or banner/ (the living banner's background); no other path
+if (!in_array($width, IMAGE_WIDTHS, true) || !preg_match('~^(icon/|banner/)?[\w-][\w.-]*\.(webp|jpe?g|png)$~iD', $name) || !is_file($src)) {
     http_response_code(404);
     exit;
 }

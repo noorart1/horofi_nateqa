@@ -108,11 +108,6 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
 $animPlayer = !empty($animated) ? 'anim/player.html?v=' . image_version(__DIR__ . '/anim/player.html') : null;
 $banner = image_url('headerontop.jpg', 1200);
 if ($home) {
-    $total = count(tracks());
-    $s = db()->prepare('SELECT COUNT(*) FROM progress WHERE user_id = ?');
-    $s->execute([$me['id']]);
-    $heardCount = min($total, (int)$s->fetchColumn());
-    $ar = fn(int $n) => strtr((string)$n, ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']);
     // the living banner: layers cut by tools/banner_layers.py (img/banner/ is not in git); without them it stays still
     $bdir = __DIR__ . '/img/banner/';
     $layers = is_file($bdir . 'layers.json') ? json_decode(file_get_contents($bdir . 'layers.json'), true) : null;
@@ -203,10 +198,8 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
     </div>
   </div>
   <nav class="choose" id="choose">
-    <a href="?letters" class="go-letters"><img src="<?= $h(image_url('main.jpg', 1200)) ?>" alt="مدرسة الحروف" width="776" height="691">
-      <?php if ($heardCount): ?><span class="badge" aria-label="الحروف المسموعة: <?= $ar($heardCount) ?> من <?= $ar($total) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z" fill="#ffcb05" stroke="#e9a400" stroke-width="1.2" stroke-linejoin="round"/></svg><b><?= $ar($heardCount) ?> / <?= $ar($total) ?></b></span><?php endif ?></a>
-    <a href="game.php" class="go-game"><img src="<?= $h(image_url('forgame.jpg', 1200)) ?>" alt="نادي الذكاء" width="776" height="691">
-      <span class="badge" id="medals" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8l-2 6h-4z" fill="#9560a6"/><circle cx="12" cy="15" r="6.5" fill="#ffcb05" stroke="#e9a400" stroke-width="1.2"/><path d="M12 11.6l1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3z" fill="#fff"/></svg><b></b></span></a>
+    <a href="?letters" class="go-letters"><img src="<?= $h(image_url('main.jpg', 1200)) ?>" alt="مدرسة الحروف" width="776" height="691"></a>
+    <a href="game.php" class="go-game"><img src="<?= $h(image_url('forgame.jpg', 1200)) ?>" alt="نادي الذكاء" width="776" height="691"></a>
   </nav>
   <script>try { if (!sessionStorage.getItem('choice-in') && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.getElementById('choose').classList.add('wait'); } catch {} // hidden until the cards drop in (choice.js)</script>
   <div class="meadow"><canvas id="meadow" role="img" aria-label="حيوانات صغيرة في العشب، المسها"></canvas></div>

@@ -261,11 +261,6 @@ Promise.race([decoded.then(() => true), new Promise(r => setTimeout(() => r(fals
   nextWave = performance.now() / 1000 + (enter ? 1.7 : 0.6); // the boy first waves once the cards have landed
 });
 
-// the games' badges: game.js keeps them in this browser, per child; show the current child's count, or nothing yet
-try {
-  const store = JSON.parse(localStorage.getItem('horofi-happy-world-1')) || {}, n = Object.keys(store.profiles?.[store.current]?.badges || {}).length;
-  if (n) { const m = $('medals'); m.lastChild.textContent = n.toLocaleString('ar'); m.setAttribute('aria-label', 'الأوسمة: ' + n.toLocaleString('ar')); m.hidden = false; }
-} catch {}
 
 // ---------- the grown-ups' gear: held for a second it opens (its ring fills); a quick tap only shows a hint ----------
 const gear = $('gear'), menu = $('menu'), tip = $('tip');

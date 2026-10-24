@@ -80,9 +80,6 @@ html, body { overflow-x:clip; } /* nothing that flies in (a falling card, a drop
 .choose img { display:block; width:100%; height:auto; }
 .choose a::after { content:""; position:absolute; inset:0; border-radius:18px; border:6px solid var(--sun); opacity:0; pointer-events:none; }
 .choose.wait a { opacity:0; }
-.badge { position:absolute; bottom:10px; inset-inline-start:10px; display:flex; align-items:center; gap:6px; padding:6px 12px 6px 10px; border-radius:999px;
-  background:#fff; color:var(--ink); font-weight:800; font-size:1rem; box-shadow:0 4px 0 #00000014; }
-.badge svg { width:22px; height:22px; }
 .ground { position:absolute; z-index:0; height:16px; border-radius:50%; background:radial-gradient(closest-side, #00507a4d, transparent); pointer-events:none; }
 .goo { position:fixed; z-index:0; border-radius:50%; pointer-events:none; }
 /* the living ground: grass, flowers and a few animals from the book; tap one and it jumps and makes its sound */

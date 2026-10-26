@@ -495,7 +495,16 @@ function fullOffset(r, x, y, t) {
 const depthOf = r => ancestors(r).length;
 // How the region i (or container) and every container around it move a point near (x, y): the mouth and eyes are drawn
 // through this matrix, so they turn, scale and sway with their character exactly like a region inside a container.
-function followMatrix(i, x, y, t) { const r = D.sway[i]; return r ? outerMatrix(r, t).multiply(ownMatrix(r, x, y, t)) : new DOMMatrix(); }
+function followMatrix(i, x, y, t) { const r = under(D.sway[i], x, y); return r ? outerMatrix(r, t).multiply(ownMatrix(r, x, y, t)) : new DOMMatrix(); }
+// A mouth put "inside" a container (or a big region) follows the deepest region under it in there, e.g. the monkey's body
+// that also moves on its own, and measures the containers at that region's middle, the same as when the region is drawn.
+function under(r, x, y) {
+  if (!r) return r;
+  let best = r;
+  for (const s of D.sway) if (!s.group && s !== r && depthOf(s) > depthOf(best) && ancestors(s).includes(r)
+    && (s.poly ? pointInPoly(x, y, s.poly) : x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h)) best = s;
+  return best;
+}
 const applyM = (c, M) => { if (!M.isIdentity) c.transform(M.a, M.b, M.c, M.d, M.e, M.f); };
 const spinA = (r, t) => ampOf(r) * Math.PI / 180 * Math.sin(t * r.speed + r.ph);
 function offsetAt(r, x, y, t) {
